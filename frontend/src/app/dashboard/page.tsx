@@ -14,22 +14,26 @@ const dosis = Dosis({
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { currentWorkspace, isLoading } = useWorkspaceStore();
+  const { currentWorkspace, isLoading, isHydrated } = useWorkspaceStore();
 
   useEffect(() => {
-    if (!isLoading && !currentWorkspace) {
+    // Only redirect if we're hydrated and there's no workspace
+    if (isHydrated && !isLoading && !currentWorkspace) {
       router.push("/");
     }
-  }, [currentWorkspace, isLoading, router]);
+  }, [currentWorkspace, isLoading, isHydrated, router]);
 
-  if (isLoading || !currentWorkspace) {
+  // Show loading while not hydrated or while loading
+  if (!isHydrated || isLoading || !currentWorkspace) {
     return (
       <div
         className={`${dosis.variable} min-h-screen flex items-center justify-center`}
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="font-dosis text-gray-600">Loading your workspace...</p>
+          <p className="font-dosis text-gray-600 dark:text-gray-300">
+            {!isHydrated ? "Initializing..." : "Loading your workspace..."}
+          </p>
         </div>
       </div>
     );

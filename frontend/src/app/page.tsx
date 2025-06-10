@@ -2,7 +2,7 @@
 
 import { Dosis } from "next/font/google";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useWorkspaceStore } from "@/store";
@@ -31,11 +31,19 @@ const containerVariants = {
 
 export default function Home() {
   const router = useRouter();
-  const { createWorkspace, isLoading } = useWorkspaceStore();
+  const { createWorkspace, isLoading, currentWorkspace, isHydrated } =
+    useWorkspaceStore();
 
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
+
+  // Redirect to dashboard if workspace exists
+  useEffect(() => {
+    if (isHydrated && currentWorkspace && !isLoading) {
+      router.push("/dashboard");
+    }
+  }, [currentWorkspace, isHydrated, isLoading, router]);
 
   const handleImportWorkspace = () => {
     const input = document.createElement("input");
@@ -99,6 +107,27 @@ export default function Home() {
     setIsUserInfoModalOpen(false);
     setWorkspaceName("");
   };
+
+  // Show loading while hydrating
+  if (!isHydrated) {
+    return (
+      <div
+        className={`${dosis.variable} min-h-screen flex items-center justify-center`}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="font-dosis text-gray-600 dark:text-gray-300">
+            Loading Taku...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render landing page if there's already a workspace (will redirect)
+  if (currentWorkspace) {
+    return null;
+  }
 
   return (
     <div className={`${dosis.variable} min-h-screen relative overflow-hidden`}>

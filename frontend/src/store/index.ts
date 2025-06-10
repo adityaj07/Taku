@@ -6,6 +6,7 @@ import { persist, subscribeWithSelector } from "zustand/middleware";
 interface WorkspaceState {
   currentWorkspace: Workspace | null;
   isLoading: boolean;
+  isHydrated: boolean;
 
   // Actions
   createWorkspace: (
@@ -16,6 +17,7 @@ interface WorkspaceState {
     settings: Partial<Workspace["settings"]>
   ) => Promise<void>;
   setTheme: (theme: Workspace["theme"]) => Promise<void>;
+  setHydrated: () => void;
 
   // Task actions
   addTask: (
@@ -152,6 +154,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       (set, get) => ({
         currentWorkspace: null,
         isLoading: false,
+        isHydrated: false,
+
+        setHydrated: () => set({ isHydrated: true }),
 
         createWorkspace: async (workspaceData) => {
           set({ isLoading: true });
@@ -470,7 +475,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       }),
       {
         name: "taku-workspace",
-        partialize: (state) => ({ currentWorkspace: state.currentWorkspace }),
+        partialize: (state) => ({
+          currentWorkspace: state.currentWorkspace,
+        }),
+        onRehydrateStorage: () => (state) => {
+          state?.setHydrated();
+        },
       }
     )
   )
