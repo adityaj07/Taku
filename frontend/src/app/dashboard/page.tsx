@@ -2,6 +2,16 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -9,26 +19,57 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Task } from "@/lib/db";
+import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store";
-import { AnimatePresence, motion } from "framer-motion";
+import { format } from "date-fns";
+import { motion } from "framer-motion";
 import {
   AlertCircle,
+  CalendarIcon,
+  Check,
   CheckCircle2,
   Circle,
   Clock,
+  Copy,
+  MoreHorizontal,
+  Play,
   Plus,
-  Timer,
+  Square,
+  Trash2,
 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -36,57 +77,35 @@ const dosis = Dosis({
   variable: "--font-dosis",
 });
 
+// Minimal animations
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
+  visible: { opacity: 1, transition: { duration: 0.3 } },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-    },
-  },
-};
-
-const taskVariants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: {
-      duration: 0.4,
-      ease: "easeOut",
-    },
-  },
-};
-
-const columnVariants = {
-  hidden: { opacity: 0, x: 20 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { currentWorkspace, isLoading, isHydrated } = useWorkspaceStore();
+  const {
+    currentWorkspace,
+    isLoading,
+    isHydrated,
+    updateTask,
+    deleteTask,
+    moveTask,
+    startTimer,
+    stopTimer,
+    addTask,
+  } = useWorkspaceStore();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   useEffect(() => {
     if (isHydrated && !isLoading && !currentWorkspace) {
@@ -94,10 +113,81 @@ export default function DashboardPage() {
     }
   }, [currentWorkspace, isLoading, isHydrated, router]);
 
+  // Add timer update effect
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    const timer = setInterval(() => {
+      if (currentWorkspace?.tasks) {
+        const newActiveTimers: Record<string, number> = {};
+        currentWorkspace.tasks.forEach((task) => {
+          if (task.isActive && task.startTime) {
+            const elapsed = Math.floor(
+              (Date.now() - new Date(task.startTime).getTime()) / 1000
+            );
+            newActiveTimers[task.id] = elapsed;
+          }
+        });
+        setActiveTimers(newActiveTimers);
+      }
+    }, 1000);
+
     return () => clearInterval(timer);
-  }, []);
+  }, [currentWorkspace?.tasks]);
+
+  // Initialize heatmap
+  // useEffect(() => {
+  //   if (currentWorkspace) {
+  //     const cal: CalHeatmap = new CalHeatmap();
+  //     cal.paint({
+  //       itemSelector: "#heatmap",
+  //       domain: {
+  //         type: "month",
+  //         gutter: 4,
+  //         label: { text: "MMM", textAlign: "start", position: "top" },
+  //       },
+  //       subDomain: {
+  //         type: "ghDay",
+  //         radius: 2,
+  //         width: 11,
+  //         height: 11,
+  //         gutter: 4,
+  //       },
+  //       data: {
+  //         source: generateHeatmapData(),
+  //         x: "date",
+  //         y: "value",
+  //       },
+  //       date: { start: new Date(new Date().getFullYear(), 0, 1) },
+  //       scale: {
+  //         color: {
+  //           type: "threshold",
+  //           range: ["#ebedf0", "#c6e48b", "#7bc96f", "#239a3b", "#196127"],
+  //           domain: [1, 2, 3, 4],
+  //         },
+  //       },
+  //     });
+  //   }
+  // }, [currentWorkspace]);
+
+  const generateHeatmapData = () => {
+    if (!currentWorkspace) return [];
+
+    // Generate mock data based on time entries
+    const data = [];
+    const startDate = new Date(new Date().getFullYear(), 0, 1);
+    const endDate = new Date();
+
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = d.toISOString().split("T")[0];
+      const value = Math.floor(Math.random() * 5);
+      data.push({ date: dateStr, value });
+    }
+
+    return data;
+  };
 
   if (!isHydrated || isLoading || !currentWorkspace) {
     return (
@@ -107,7 +197,7 @@ export default function DashboardPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="font-dosis text-gray-600 dark:text-gray-300">
-            {!isHydrated ? "Initializing..." : "Loading your workspace..."}
+            Loading...
           </p>
         </div>
       </div>
@@ -134,17 +224,112 @@ export default function DashboardPage() {
     }
   };
 
-  const getPriorityStyles = (priority: string) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800/50";
+        return "text-red-600 dark:text-red-400";
       case "medium":
-        return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800/50";
+        return "text-amber-600 dark:text-amber-400";
       case "low":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/50";
+        return "text-emerald-600 dark:text-emerald-400";
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-800/50";
+        return "text-gray-600 dark:text-gray-400";
     }
+  };
+
+  const formatActiveTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const handleTaskEdit = async (
+    taskId: string,
+    field: keyof Task,
+    value: any
+  ) => {
+    await updateTask(taskId, { [field]: value });
+    setEditingTask(null);
+  };
+
+  const handleTaskComplete = async (taskId: string) => {
+    await moveTask(taskId, "Done");
+  };
+
+  const handleTaskDuplicate = async (task: Task) => {
+    await addTask({
+      title: `${task.title} (Copy)`,
+      description: task.description,
+      column: task.column,
+      priority: task.priority,
+      dueDate: task.dueDate,
+    });
+  };
+
+  const handleTaskDelete = async () => {
+    if (taskToDelete) {
+      await deleteTask(taskToDelete.id);
+      setTaskToDelete(null);
+    }
+  };
+
+  const handleTimerToggle = async (task: Task) => {
+    if (task.isActive) {
+      await stopTimer(task.id);
+    } else {
+      await startTimer(task.id);
+    }
+  };
+
+  const onDragEnd = async (result: {
+    destination: any;
+    source: any;
+    draggableId: any;
+  }) => {
+    const { destination, source, draggableId } = result;
+
+    // If dropped outside a valid drop zone
+    if (!destination) {
+      return;
+    }
+
+    // If dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    try {
+      // Move task between columns or reorder within same column
+      await moveTask(draggableId, destination.droppableId);
+    } catch (error) {
+      console.error("Failed to move task:", error);
+      // Optionally show error toast/notification
+    }
+  };
+
+  // Add this helper function for adding tasks to specific columns
+  const handleAddTaskToColumn = async (columnName: string) => {
+    await addTask({
+      title: "New Task",
+      description: "",
+      column: columnName,
+      priority: "medium",
+    });
   };
 
   // Calculate weekly progress
@@ -158,282 +343,551 @@ export default function DashboardPage() {
     100
   );
 
-  // Generate heatmap data for this week
-  const getHeatmapData = () => {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const today = new Date();
-    const currentDay = today.getDay();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(
-      today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)
-    );
-
-    return days.map((day, index) => {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + index);
-
-      // Mock data - in real app, this would come from timeEntries
-      const hoursWorked = Math.random() * 4;
-      const intensity = Math.min(hoursWorked / 3, 1);
-
-      return {
-        day,
-        date,
-        hours: hoursWorked,
-        intensity,
-      };
-    });
-  };
-
-  const heatmapData = getHeatmapData();
-
   // Group tasks by column
   const tasksByColumn = currentWorkspace.columns.reduce((acc, column) => {
     acc[column] = currentWorkspace.tasks.filter(
       (task) => task.column === column
     );
     return acc;
-  }, {} as Record<string, typeof currentWorkspace.tasks>);
+  }, {} as Record<string, Task[]>);
 
   return (
-    <div className={dosis.variable}>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          {/* Header with Breadcrumbs */}
-          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-200/50 dark:border-gray-700/50">
-            <div className="flex items-center gap-2 px-6">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="#"
-                      className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    >
-                      Workspace
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {currentWorkspace.name}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <motion.main
-            className="flex-1 p-6 space-y-8 max-w-7xl mx-auto"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Welcome Header */}
-            <motion.div variants={cardVariants} className="space-y-4">
-              <div className="space-y-2">
-                <h1 className="font-dosis text-4xl font-bold text-gray-900 dark:text-gray-100">
-                  {getGreeting()}, {currentWorkspace.ownerName.split(" ")[0]} 👋
-                </h1>
-                <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
-                  Here's how your week is looking.
-                </p>
+    <>
+      <div className={dosis.variable}>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            {/* Header with Breadcrumbs */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 px-6">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbLink
+                        href="#"
+                        className="font-dosis text-sm text-gray-600 dark:text-gray-400"
+                      >
+                        Workspace
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {currentWorkspace.name}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
+            </header>
 
-              {/* Weekly Progress */}
-              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-orange-500" />
-                    <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
-                      Weekly Goal Progress
+            {/* Main Content */}
+            <motion.main
+              className="flex-1 p-6 space-y-6 max-w-7xl mx-auto"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Welcome Header */}
+              <motion.div variants={cardVariants} className="space-y-4">
+                <div className="space-y-2">
+                  <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    {getGreeting()}, {currentWorkspace.ownerName.split(" ")[0]}{" "}
+                    👋
+                  </h1>
+                  <p className="font-dosis text-gray-600 dark:text-gray-400">
+                    Here's how your week is looking.
+                  </p>
+                </div>
+
+                {/* Weekly Progress */}
+                <div className="bg-white dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-orange-500" />
+                      <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                        Weekly Goal Progress
+                      </span>
+                    </div>
+                    <span className="font-dosis text-sm text-gray-500 dark:text-gray-400">
+                      {(totalTimeThisWeek / 60).toFixed(1)} / {weeklyGoalHours}h
                     </span>
                   </div>
-                  <span className="font-dosis text-sm text-gray-500 dark:text-gray-400">
-                    {(totalTimeThisWeek / 60).toFixed(1)} / {weeklyGoalHours}h
-                  </span>
+                  <Progress
+                    value={weeklyProgressPercentage}
+                    className="h-3 bg-gray-100 dark:bg-gray-700"
+                  />
                 </div>
-                <Progress
-                  value={weeklyProgressPercentage}
-                  className="h-3 bg-gray-100 dark:bg-gray-700"
-                />
-              </div>
-            </motion.div>
+              </motion.div>
 
-            {/* Heatmap */}
-            <motion.div variants={cardVariants} className="space-y-4">
-              <h2 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
-                This Week
-              </h2>
-              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between gap-4">
-                  {heatmapData.map((data, index) => (
-                    <motion.div
-                      key={data.day}
-                      variants={cardVariants}
-                      className="flex-1 text-center group cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <div className="space-y-2">
-                        <p className="font-dosis text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          {data.day}
-                        </p>
+              {/* Heatmap */}
+              <motion.div variants={cardVariants} className="space-y-4">
+                <h2 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
+                  Activity Heatmap
+                </h2>
+                <div className="bg-white dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
+                  <div id="heatmap"></div>
+                </div>
+              </motion.div>
+
+              {/* Kanban Board */}
+              <motion.div variants={cardVariants} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    Your Tasks
+                  </h2>
+                  <button
+                    onClick={() => handleAddTaskToColumn("Todo")}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Task
+                  </button>
+                </div>
+
+                <DragDropContext onDragEnd={onDragEnd}>
+                  {/* Mobile: Horizontal scroll, Desktop: Grid */}
+                  <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] md:grid md:grid-cols-3 md:gap-6 md:overflow-visible">
+                    {currentWorkspace.columns.map((column) => {
+                      const tasks = tasksByColumn[column] || [];
+                      return (
                         <div
-                          className={`w-full h-12 rounded-lg border transition-all duration-200 ${
-                            data.intensity > 0.7
-                              ? "bg-orange-200 border-orange-300 dark:bg-orange-900/60 dark:border-orange-700"
-                              : data.intensity > 0.4
-                              ? "bg-orange-100 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800"
-                              : data.intensity > 0.1
-                              ? "bg-orange-50 border-orange-100 dark:bg-orange-900/10 dark:border-orange-900"
-                              : "bg-gray-50 border-gray-100 dark:bg-gray-800 dark:border-gray-700"
-                          } group-hover:shadow-sm`}
-                          title={`${data.hours.toFixed(1)}h tracked on ${
-                            data.day
-                          }`}
-                        />
-                        <p className="font-dosis text-xs text-gray-400 dark:text-gray-500">
-                          {data.hours.toFixed(1)}h
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Kanban Columns */}
-            <motion.div variants={cardVariants} className="space-y-6">
-              <h2 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Your Tasks
-              </h2>
-
-              <div className="overflow-x-auto pb-4">
-                <div className="flex gap-6 min-w-fit">
-                  {currentWorkspace.columns.map((column, columnIndex) => {
-                    const tasks = tasksByColumn[column] || [];
-                    return (
-                      <motion.div
-                        key={column}
-                        variants={columnVariants}
-                        custom={columnIndex}
-                        className="flex-shrink-0 w-80"
-                      >
-                        <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm h-fit">
+                          key={column}
+                          className="flex-shrink-0 w-80 md:w-auto space-y-4 min-w-[320px]"
+                        >
                           {/* Column Header */}
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                              {column}
-                            </h3>
-                            <span className="font-dosis text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">
-                              {tasks.length}
-                            </span>
+                          <div className="flex items-center justify-between sticky top-0 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg z-10 border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                                {column}
+                              </h3>
+                              <span className="text-sm text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                                {tasks.length}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleAddTaskToColumn(column)}
+                              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-md transition-colors"
+                              title={`Add task to ${column}`}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
                           </div>
 
-                          {/* Tasks */}
-                          <div className="space-y-3">
-                            <AnimatePresence>
-                              {tasks.length === 0 ? (
-                                <motion.div
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  className="text-center py-8"
-                                >
-                                  <p className="font-dosis text-sm text-gray-400 dark:text-gray-500">
-                                    No tasks yet
-                                  </p>
-                                </motion.div>
-                              ) : (
-                                tasks.map((task, taskIndex) => (
-                                  <motion.div
-                                    key={task.id}
-                                    variants={taskVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="hidden"
-                                    custom={taskIndex}
-                                    className="bg-white dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer group"
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
+                          {/* Droppable Column */}
+                          <Droppable droppableId={column}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={cn(
+                                  "min-h-[400px] p-3 rounded-xl border-2 border-dashed transition-all duration-200",
+                                  snapshot.isDraggingOver
+                                    ? "border-orange-400 bg-orange-50 dark:border-orange-500 dark:bg-orange-950/20 shadow-lg"
+                                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                )}
+                                style={{
+                                  // Ensure the droppable area is properly sized
+                                  minHeight: "400px",
+                                  position: "relative",
+                                }}
+                              >
+                                {tasks.length === 0 ? (
+                                  // Update empty state to show drop zone
+                                  <div
+                                    className={cn(
+                                      "flex flex-col items-center justify-center h-64 text-center transition-all duration-200",
+                                      snapshot.isDraggingOver
+                                        ? "text-orange-600"
+                                        : "text-gray-500"
+                                    )}
                                   >
-                                    <div className="space-y-3">
-                                      <div className="flex items-start justify-between">
-                                        <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed">
-                                          {task.title}
-                                        </h4>
-                                        {task.isActive && (
-                                          <motion.div
-                                            animate={{ scale: [1, 1.1, 1] }}
-                                            transition={{
-                                              duration: 2,
-                                              repeat: Infinity,
-                                            }}
-                                            className="flex items-center gap-1 text-orange-500"
-                                          >
-                                            <Timer className="w-3 h-3" />
-                                          </motion.div>
+                                    <div
+                                      className={cn(
+                                        "w-16 h-16 rounded-full flex items-center justify-center mb-3 transition-all duration-200",
+                                        snapshot.isDraggingOver
+                                          ? "bg-orange-100 dark:bg-orange-950/30"
+                                          : "bg-gray-100 dark:bg-gray-800"
+                                      )}
+                                    >
+                                      <Square
+                                        className={cn(
+                                          "w-8 h-8 transition-all duration-200",
+                                          snapshot.isDraggingOver
+                                            ? "text-orange-600"
+                                            : "text-gray-400"
                                         )}
-                                      </div>
-
-                                      <div className="flex items-center justify-between">
-                                        <div
-                                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-dosis font-medium border ${getPriorityStyles(
-                                            task.priority
-                                          )}`}
-                                        >
-                                          {getPriorityIcon(task.priority)}
-                                          <span className="capitalize">
-                                            {task.priority}
-                                          </span>
-                                        </div>
-
-                                        {task.timeSpent > 0 && (
-                                          <span className="font-dosis text-xs text-gray-500 dark:text-gray-400">
-                                            {task.timeSpent}m
-                                          </span>
-                                        )}
-                                      </div>
+                                      />
                                     </div>
-                                  </motion.div>
-                                ))
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </motion.main>
+                                    <p className="font-dosis dark:text-gray-400 mb-2">
+                                      {snapshot.isDraggingOver
+                                        ? `Drop task in ${column.toLowerCase()}`
+                                        : `No tasks in ${column.toLowerCase()}`}
+                                    </p>
+                                    {!snapshot.isDraggingOver && (
+                                      <button
+                                        onClick={() =>
+                                          handleAddTaskToColumn(column)
+                                        }
+                                        className="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
+                                      >
+                                        Add your first task
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {tasks.map((task, index) => (
+                                      <Draggable
+                                        key={task.id}
+                                        draggableId={task.id}
+                                        index={index}
+                                      >
+                                        {(provided, snapshot) => (
+                                          <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            className={cn(
+                                              "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm group transition-all duration-200",
+                                              snapshot.isDragging
+                                                ? "shadow-2xl rotate-1 scale-105 ring-2 ring-orange-200 dark:ring-orange-800 z-50 cursor-grabbing"
+                                                : "hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 cursor-grab",
+                                              task.isActive &&
+                                                "ring-2 ring-orange-200 dark:ring-orange-800 bg-orange-50/50 dark:bg-orange-950/20"
+                                            )}
+                                            style={{
+                                              // Apply the draggable styles
+                                              ...provided.draggableProps.style,
+                                              // Ensure proper z-index when dragging
+                                              zIndex: snapshot.isDragging
+                                                ? 9999
+                                                : "auto",
+                                            }}
+                                          >
+                                            {/* Keep all existing task content exactly the same */}
+                                            <div className="p-4 space-y-3">
+                                              {/* Title and Actions Row */}
+                                              <div className="flex items-start justify-between gap-2">
+                                                {editingTask === task.id ? (
+                                                  <Input
+                                                    value={editValue}
+                                                    onChange={(e) =>
+                                                      setEditValue(
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    onBlur={() =>
+                                                      handleTaskEdit(
+                                                        task.id,
+                                                        "title",
+                                                        editValue
+                                                      )
+                                                    }
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === "Enter") {
+                                                        handleTaskEdit(
+                                                          task.id,
+                                                          "title",
+                                                          editValue
+                                                        );
+                                                      }
+                                                      if (e.key === "Escape") {
+                                                        setEditingTask(null);
+                                                      }
+                                                    }}
+                                                    className="text-sm font-medium flex-1"
+                                                    autoFocus
+                                                    onClick={(e) =>
+                                                      e.stopPropagation()
+                                                    }
+                                                  />
+                                                ) : (
+                                                  <h4
+                                                    className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-orange-600 transition-colors flex-1"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setEditingTask(task.id);
+                                                      setEditValue(task.title);
+                                                    }}
+                                                  >
+                                                    {task.title}
+                                                  </h4>
+                                                )}
 
-          {/* Floating Action Button */}
-          <motion.div
-            className="fixed bottom-6 right-6 z-50"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              delay: 1,
-              type: "spring",
-              stiffness: 260,
-              damping: 20,
-            }}
-          >
-            <motion.button
-              className="font-dosis h-14 w-14 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg hover:shadow-xl transition-all duration-200 group"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+                                                {/* Action Buttons - prevent drag when interacting */}
+                                                <div
+                                                  className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                  onClick={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                  onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                >
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleTaskComplete(
+                                                        task.id
+                                                      );
+                                                    }}
+                                                    className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                                    title="Mark as complete"
+                                                  >
+                                                    <Check className="w-4 h-4" />
+                                                  </button>
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                      asChild
+                                                    >
+                                                      <button
+                                                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                                        onClick={(e) =>
+                                                          e.stopPropagation()
+                                                        }
+                                                      >
+                                                        <MoreHorizontal className="w-4 h-4" />
+                                                      </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                      <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          handleTaskDuplicate(
+                                                            task
+                                                          );
+                                                        }}
+                                                      >
+                                                        <Copy className="w-4 h-4 mr-2" />
+                                                        Duplicate
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setTaskToDelete(task);
+                                                        }}
+                                                        className="text-red-600"
+                                                      >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        Delete
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                </div>
+                                              </div>
+
+                                              {/* Priority and Due Date - prevent drag when interacting */}
+                                              <div
+                                                className="flex items-center justify-between gap-2"
+                                                onClick={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                onMouseDown={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                              >
+                                                {/* Priority */}
+                                                <Select
+                                                  value={task.priority}
+                                                  onValueChange={(value) =>
+                                                    handleTaskEdit(
+                                                      task.id,
+                                                      "priority",
+                                                      value
+                                                    )
+                                                  }
+                                                >
+                                                  <SelectTrigger
+                                                    className="w-auto h-7 text-xs border-0 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    onClick={(e) =>
+                                                      e.stopPropagation()
+                                                    }
+                                                  >
+                                                    <SelectValue>
+                                                      <div
+                                                        className={cn(
+                                                          "flex items-center gap-1.5",
+                                                          getPriorityColor(
+                                                            task.priority
+                                                          )
+                                                        )}
+                                                      >
+                                                        {getPriorityIcon(
+                                                          task.priority
+                                                        )}
+                                                        <span className="capitalize font-medium">
+                                                          {task.priority}
+                                                        </span>
+                                                      </div>
+                                                    </SelectValue>
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="low">
+                                                      <div className="flex items-center gap-2">
+                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                        <span>Low</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="medium">
+                                                      <div className="flex items-center gap-2">
+                                                        <Circle className="w-3 h-3 text-amber-600" />
+                                                        <span>Medium</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="high">
+                                                      <div className="flex items-center gap-2">
+                                                        <AlertCircle className="w-3 h-3 text-red-600" />
+                                                        <span>High</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+
+                                                {/* Due Date Picker */}
+                                                <Popover>
+                                                  <PopoverTrigger asChild>
+                                                    <Button
+                                                      variant="outline"
+                                                      size="sm"
+                                                      className={cn(
+                                                        "h-7 text-xs font-normal border-0 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                        !task.dueDate &&
+                                                          "text-muted-foreground"
+                                                      )}
+                                                      onClick={(e) =>
+                                                        e.stopPropagation()
+                                                      }
+                                                    >
+                                                      <CalendarIcon className="mr-1.5 h-3 w-3" />
+                                                      {task.dueDate
+                                                        ? format(
+                                                            new Date(
+                                                              task.dueDate
+                                                            ),
+                                                            "MMM dd"
+                                                          )
+                                                        : "Due date"}
+                                                    </Button>
+                                                  </PopoverTrigger>
+                                                  <PopoverContent
+                                                    className="w-auto p-0"
+                                                    align="end"
+                                                  >
+                                                    <Calendar
+                                                      mode="single"
+                                                      selected={
+                                                        task.dueDate
+                                                          ? new Date(
+                                                              task.dueDate
+                                                            )
+                                                          : undefined
+                                                      }
+                                                      onSelect={(date) => {
+                                                        if (date) {
+                                                          handleTaskEdit(
+                                                            task.id,
+                                                            "dueDate",
+                                                            date.toISOString()
+                                                          );
+                                                        }
+                                                      }}
+                                                      initialFocus
+                                                    />
+                                                  </PopoverContent>
+                                                </Popover>
+                                              </div>
+
+                                              {/* Timer Section - prevent drag when interacting */}
+                                              <div
+                                                className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700"
+                                                onClick={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                onMouseDown={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                              >
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-xs text-gray-500 font-mono">
+                                                    {formatTime(task.timeSpent)}
+                                                  </span>
+                                                  {task.isActive && (
+                                                    <span className="text-xs font-mono text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded animate-pulse">
+                                                      {formatActiveTime(
+                                                        activeTimers[task.id] ||
+                                                          0
+                                                      )}
+                                                    </span>
+                                                  )}
+                                                </div>
+
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleTimerToggle(task);
+                                                  }}
+                                                  className={cn(
+                                                    "p-1.5 rounded-md transition-colors",
+                                                    task.isActive
+                                                      ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                      : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                                                  )}
+                                                >
+                                                  {task.isActive ? (
+                                                    <Square className="w-4 h-4" />
+                                                  ) : (
+                                                    <Play className="w-4 h-4" />
+                                                  )}
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </Droppable>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </DragDropContext>
+              </motion.div>
+            </motion.main>
+          </SidebarInset>
+        </SidebarProvider>
+      </div>
+
+      <AlertDialog
+        open={!!taskToDelete}
+        onOpenChange={() => setTaskToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{taskToDelete?.title}"? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleTaskDelete}
+              className="bg-red-600 hover:bg-red-700"
             >
-              <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-200" />
-            </motion.button>
-          </motion.div>
-        </SidebarInset>
-      </SidebarProvider>
-    </div>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

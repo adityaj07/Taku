@@ -34,6 +34,7 @@ interface WorkspaceState {
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   moveTask: (taskId: string, newColumn: string) => Promise<void>;
+  reorderTasks: (columnId: string, taskIds: string[]) => Promise<void>;
   startTimer: (taskId: string) => Promise<void>;
   stopTimer: (taskId: string) => Promise<void>;
 
@@ -351,16 +352,25 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           await updateTask(taskId, { column: newColumn });
         },
 
+        reorderTasks: async (columnId, taskIds) => {
+          //TODO: This would require updating the Task schema to include an order field
+          // For now, we'll keep it simple and not implement reordering within columns
+          console.log("Reordering tasks:", columnId, taskIds);
+        },
+
         startTimer: async (taskId) => {
           const { currentWorkspace, updateTask } = get();
           if (!currentWorkspace) return;
 
           // Stop any other active timers
           const activeTasks = currentWorkspace.tasks.filter(
-            (task) => task.isActive
+            (task) => task.isActive && task.id !== taskId
           );
           for (const task of activeTasks) {
-            await updateTask(task.id, { isActive: false });
+            await updateTask(task.id, {
+              isActive: false,
+              startTime: undefined,
+            });
           }
 
           // Start timer for this task
