@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useWorkspaceStore } from "@/store";
 import { motion } from "framer-motion";
-import { Settings } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -51,7 +51,7 @@ const cardVariants = {
   },
 };
 
-export default function SettingsPage() {
+export default function TimesheetPage() {
   const router = useRouter();
   const { currentWorkspace, isLoading, isHydrated } = useWorkspaceStore();
 
@@ -99,7 +99,7 @@ export default function SettingsPage() {
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
                     <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Settings
+                      Timesheet
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
@@ -117,26 +117,28 @@ export default function SettingsPage() {
             {/* Page Header */}
             <motion.div variants={cardVariants} className="space-y-2">
               <div className="flex items-center gap-3">
-                <Settings className="w-8 h-8 text-orange-500" />
-                <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  Settings
-                </h1>
+                <Clock className="w-8 h-8 text-orange-500" />
+                <div>
+                  <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    Timesheet
+                  </h1>
+                  <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
+                    Track and analyze your time
+                  </p>
+                </div>
               </div>
-              <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
-                Customize your Taku experience
-              </p>
             </motion.div>
 
-            {/* Settings Content */}
+            {/* Timesheet Content */}
             <motion.div variants={cardVariants}>
               <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <Settings className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                  <Clock className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
                   <h3 className="font-dosis text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Settings Panel
+                    Time Tracking
                   </h3>
                   <p className="font-dosis text-gray-600 dark:text-gray-400">
-                    Workspace settings, preferences, and customization options coming soon...
+                    Time entries, analytics, reports, and productivity insights coming soon...
                   </p>
                 </div>
               </div>
