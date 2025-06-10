@@ -19,6 +19,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -26,19 +33,28 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
+import { Task, TimeEntry } from "@/lib/db";
+import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store";
 import { addDays, format, isSameDay, isToday, startOfWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BookOpen,
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Circle,
   Clock,
   Edit3,
+  FileText,
   Plus,
+  Save,
   Target,
   Timer,
   Trash2,
+  User,
+  X,
 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
@@ -50,43 +66,16 @@ const dosis = Dosis({
   variable: "--font-dosis",
 });
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
-};
-
-const progressVariants = {
-  hidden: { width: 0 },
-  visible: (progress: number) => ({
-    width: `${progress}%`,
-    transition: {
-      duration: 1.5,
-      ease: "easeOut",
-      delay: 0.5,
-    },
-  }),
-};
-
 interface TimeEntryForm {
+  taskId: string;
   taskTitle: string;
+  startTime: string;
+  endTime: string;
+  description: string;
+}
+
+interface EditingTimeEntry {
+  id: string;
   startTime: string;
   endTime: string;
   description: string;
@@ -108,9 +97,12 @@ export default function TimesheetPage() {
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(
     new Set()
   );
-  const [editingEntry, setEditingEntry] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<EditingTimeEntry | null>(
+    null
+  );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEntryForm, setNewEntryForm] = useState<TimeEntryForm>({
+    taskId: "",
     taskTitle: "",
     startTime: "",
     endTime: "",
@@ -137,15 +129,20 @@ export default function TimesheetPage() {
     return Math.min((totalMinutes / dailyGoalMinutes) * 100, 100);
   };
 
-  // Get selected day entries
+  // Get selected day entries with associated task data
   const getSelectedDayEntries = () => {
     if (!currentWorkspace) return [];
+
     return currentWorkspace.timeEntries
       .filter((entry) => isSameDay(new Date(entry.startTime), selectedDate))
       .sort(
         (a, b) =>
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-      );
+      )
+      .map((entry) => {
+        const task = currentWorkspace.tasks.find((t) => t.id === entry.taskId);
+        return { ...entry, task };
+      });
   };
 
   // Calculate weekly stats
@@ -182,6 +179,10 @@ export default function TimesheetPage() {
     return format(new Date(timeString), "HH:mm");
   };
 
+  const formatTimeInput = (timeString: string) => {
+    return format(new Date(timeString), "HH:mm");
+  };
+
   const toggleEntryExpansion = (entryId: string) => {
     const newExpanded = new Set(expandedEntries);
     if (newExpanded.has(entryId)) {
@@ -192,13 +193,48 @@ export default function TimesheetPage() {
     setExpandedEntries(newExpanded);
   };
 
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return <AlertCircle className="w-3 h-3" />;
+      case "medium":
+        return <Circle className="w-3 h-3" />;
+      case "low":
+        return <CheckCircle2 className="w-3 h-3" />;
+      default:
+        return <Circle className="w-3 h-3" />;
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "text-red-500 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/20 dark:border-red-800";
+      case "medium":
+        return "text-amber-500 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/20 dark:border-amber-800";
+      case "low":
+        return "text-emerald-500 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-800";
+      default:
+        return "text-gray-500 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-950/20 dark:border-gray-800";
+    }
+  };
+
+  const getColumnColor = (column: string) => {
+    switch (column.toLowerCase()) {
+      case "todo":
+        return "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/20 dark:border-blue-800";
+      case "in progress":
+        return "text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/20 dark:border-orange-800";
+      case "done":
+        return "text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/20 dark:border-green-800";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-950/20 dark:border-gray-800";
+    }
+  };
+
   const handleAddEntry = async () => {
-    if (
-      !newEntryForm.taskTitle ||
-      !newEntryForm.startTime ||
-      !newEntryForm.endTime
-    )
-      return;
+    if (!newEntryForm.startTime || !newEntryForm.endTime) return;
+    if (!newEntryForm.taskId && !newEntryForm.taskTitle) return;
 
     const startTime = new Date(
       `${format(selectedDate, "yyyy-MM-dd")}T${newEntryForm.startTime}`
@@ -212,7 +248,7 @@ export default function TimesheetPage() {
     );
 
     await addTimeEntry({
-      taskId: "", // For manual entries, this can be empty or linked to a task
+      taskId: newEntryForm.taskId,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       duration,
@@ -220,6 +256,7 @@ export default function TimesheetPage() {
     });
 
     setNewEntryForm({
+      taskId: "",
       taskTitle: "",
       startTime: "",
       endTime: "",
@@ -228,8 +265,41 @@ export default function TimesheetPage() {
     setIsAddModalOpen(false);
   };
 
+  const handleEditEntry = async () => {
+    if (!editingEntry) return;
+
+    const startTime = new Date(
+      `${format(selectedDate, "yyyy-MM-dd")}T${editingEntry.startTime}`
+    );
+    const endTime = new Date(
+      `${format(selectedDate, "yyyy-MM-dd")}T${editingEntry.endTime}`
+    );
+    const duration = Math.max(
+      0,
+      Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+    );
+
+    await updateTimeEntry(editingEntry.id, {
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      duration,
+      description: editingEntry.description,
+    });
+
+    setEditingEntry(null);
+  };
+
   const handleDeleteEntry = async (entryId: string) => {
     await deleteTimeEntry(entryId);
+  };
+
+  const startEditingEntry = (entry: TimeEntry & { task?: Task }) => {
+    setEditingEntry({
+      id: entry.id,
+      startTime: formatTimeInput(entry.startTime),
+      endTime: entry.endTime ? formatTimeInput(entry.endTime) : "",
+      description: entry.description || "",
+    });
   };
 
   useEffect(() => {
@@ -241,7 +311,7 @@ export default function TimesheetPage() {
   if (!isHydrated || isLoading || !currentWorkspace) {
     return (
       <div
-        className={`${dosis.variable} min-h-screen flex items-center justify-center`}
+        className={`${dosis.variable} min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900`}
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
@@ -258,99 +328,120 @@ export default function TimesheetPage() {
   const weeklyStats = getWeeklyStats();
 
   return (
-    <div className={dosis.variable}>
+    <div
+      className={`${dosis.variable} h-screen flex bg-gray-50 dark:bg-gray-900`}
+    >
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          {/* Header with Breadcrumbs */}
-          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="/dashboard"
-                      className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    >
-                      {currentWorkspace.name}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Timesheet
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <motion.main
-            className="flex-1 p-6 space-y-6 max-w-7xl mx-auto"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Page Header */}
-            <motion.div variants={cardVariants} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
-                      Timesheet
-                    </h1>
-                    <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
-                      Track and analyze your time
-                    </p>
-                  </div>
-                </div>
-
-                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="font-dosis bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Entry
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="font-dosis">
-                        Add Time Entry
-                      </DialogTitle>
-                      <DialogDescription className="font-dosis">
-                        Create a new time entry for{" "}
-                        {format(selectedDate, "MMMM dd, yyyy")}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                          Task Title
-                        </label>
+        <SidebarInset className="flex flex-col">
+          {/* Header */}
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink
+                    href="/dashboard"
+                    className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    {currentWorkspace.name}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Timesheet
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="ml-auto">
+              <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="font-dosis bg-orange-500 hover:bg-orange-600"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Entry
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="font-dosis">
+                      Add Time Entry
+                    </DialogTitle>
+                    <DialogDescription className="font-dosis">
+                      Create a new time entry for{" "}
+                      {format(selectedDate, "MMMM dd, yyyy")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="font-dosis text-sm font-medium">
+                        Task
+                      </label>
+                      <div className="space-y-2">
+                        <Select
+                          value={newEntryForm.taskId}
+                          onValueChange={(value) => {
+                            const task = currentWorkspace.tasks.find(
+                              (t) => t.id === value
+                            );
+                            setNewEntryForm((prev) => ({
+                              ...prev,
+                              taskId: value,
+                              taskTitle: task ? task.title : "",
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="font-dosis">
+                            <SelectValue placeholder="Select existing task" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currentWorkspace.tasks.map((task) => (
+                              <SelectItem key={task.id} value={task.id}>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "px-2 py-1 rounded-md text-xs border",
+                                      getColumnColor(task.column)
+                                    )}
+                                  >
+                                    {task.column}
+                                  </span>
+                                  <span>{task.title}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                          or
+                        </div>
                         <Input
-                          placeholder="What did you work on?"
+                          placeholder="Enter custom task name"
                           value={newEntryForm.taskTitle}
                           onChange={(e) =>
                             setNewEntryForm((prev) => ({
                               ...prev,
                               taskTitle: e.target.value,
+                              taskId: "",
                             }))
                           }
                           className="font-dosis"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                            Start Time
-                          </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="font-dosis text-sm font-medium">
+                          Start Time
+                        </label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <Input
                             type="time"
                             value={newEntryForm.startTime}
@@ -360,13 +451,16 @@ export default function TimesheetPage() {
                                 startTime: e.target.value,
                               }))
                             }
-                            className="font-dosis"
+                            className="font-dosis pl-10"
                           />
                         </div>
-                        <div>
-                          <label className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                            End Time
-                          </label>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="font-dosis text-sm font-medium">
+                          End Time
+                        </label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <Input
                             type="time"
                             value={newEntryForm.endTime}
@@ -376,83 +470,82 @@ export default function TimesheetPage() {
                                 endTime: e.target.value,
                               }))
                             }
-                            className="font-dosis"
+                            className="font-dosis pl-10"
                           />
                         </div>
                       </div>
-                      <div>
-                        <label className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                          Description (Optional)
-                        </label>
-                        <Textarea
-                          placeholder="Add notes about this time entry..."
-                          value={newEntryForm.description}
-                          onChange={(e) =>
-                            setNewEntryForm((prev) => ({
-                              ...prev,
-                              description: e.target.value,
-                            }))
-                          }
-                          className="font-dosis resize-none"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsAddModalOpen(false)}
-                          className="font-dosis flex-1"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleAddEntry}
-                          disabled={
-                            !newEntryForm.taskTitle ||
-                            !newEntryForm.startTime ||
-                            !newEntryForm.endTime
-                          }
-                          className="font-dosis flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                        >
-                          Add Entry
-                        </Button>
-                      </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </motion.div>
 
+                    <div className="space-y-2">
+                      <label className="font-dosis text-sm font-medium">
+                        Description (Optional)
+                      </label>
+                      <Textarea
+                        placeholder="Add notes about this time entry..."
+                        value={newEntryForm.description}
+                        onChange={(e) =>
+                          setNewEntryForm((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        className="font-dosis resize-none"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddModalOpen(false)}
+                        className="font-dosis flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddEntry}
+                        disabled={
+                          !newEntryForm.startTime ||
+                          !newEntryForm.endTime ||
+                          (!newEntryForm.taskId && !newEntryForm.taskTitle)
+                        }
+                        className="font-dosis flex-1 bg-orange-500 hover:bg-orange-600"
+                      >
+                        Add Entry
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
             {/* Weekly Strip */}
-            <motion.div variants={cardVariants}>
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
-                <div className="grid grid-cols-7 gap-3">
+            <div className="p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+              <div className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-7 gap-2">
                   {weekDates.map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate);
                     const isCurrentDay = isToday(date);
                     const progress = getDailyProgress(date);
 
                     return (
-                      <motion.button
+                      <button
                         key={index}
                         onClick={() => setSelectedDate(date)}
-                        className={`
-                          relative p-4 rounded-xl transition-all duration-300 group
-                          ${
-                            isSelected
-                              ? "bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25"
-                              : "bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                          }
-                          ${
-                            isCurrentDay && !isSelected
-                              ? "ring-2 ring-orange-300 dark:ring-orange-600"
-                              : ""
-                          }
-                        `}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        className={cn(
+                          "relative p-3 rounded-lg transition-all duration-200 group",
+                          isSelected
+                            ? "bg-orange-500 text-white shadow-md"
+                            : "bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
+                          isCurrentDay &&
+                            !isSelected &&
+                            "ring-2 ring-orange-300 dark:ring-orange-600"
+                        )}
                       >
-                        <div className="text-center space-y-2">
+                        <div className="text-center space-y-1">
                           <div className="font-dosis text-xs font-medium opacity-75">
                             {format(date, "EEE").toUpperCase()}
                           </div>
@@ -461,212 +554,336 @@ export default function TimesheetPage() {
                           </div>
 
                           {/* Progress Ring */}
-                          <div className="relative w-8 h-8 mx-auto">
+                          <div className="relative w-6 h-6 mx-auto">
                             <svg
-                              className="w-8 h-8 transform -rotate-90"
-                              viewBox="0 0 32 32"
+                              className="w-6 h-6 transform -rotate-90"
+                              viewBox="0 0 24 24"
                             >
                               <circle
-                                cx="16"
-                                cy="16"
-                                r="12"
+                                cx="12"
+                                cy="12"
+                                r="9"
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 fill="none"
                                 className="opacity-20"
                               />
-                              <motion.circle
-                                cx="16"
-                                cy="16"
-                                r="12"
+                              <circle
+                                cx="12"
+                                cy="12"
+                                r="9"
                                 stroke={
                                   isSelected ? "white" : "rgb(249 115 22)"
                                 }
                                 strokeWidth="2"
                                 fill="none"
                                 strokeLinecap="round"
-                                strokeDasharray={`${2 * Math.PI * 12}`}
-                                initial={{ strokeDashoffset: 2 * Math.PI * 12 }}
-                                animate={{
-                                  strokeDashoffset:
-                                    2 * Math.PI * 12 * (1 - progress / 100),
-                                }}
-                                transition={{ duration: 1, delay: index * 0.1 }}
+                                strokeDasharray={`${2 * Math.PI * 9}`}
+                                strokeDashoffset={
+                                  2 * Math.PI * 9 * (1 - progress / 100)
+                                }
+                                className="transition-all duration-1000"
                               />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-xs font-bold">
-                                {Math.round(progress)}%
+                              <span className="text-[10px] font-bold">
+                                {Math.round(progress)}
                               </span>
                             </div>
                           </div>
                         </div>
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
               </div>
-            </motion.div>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Content Area */}
+            <div className="flex-1 flex overflow-hidden">
               {/* Time Entries */}
-              <motion.div variants={cardVariants} className="lg:col-span-2">
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl overflow-hidden">
-                  <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
-                        {format(selectedDate, "EEEE, MMMM dd")}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Timer className="w-4 h-4" />
-                        <span className="font-dosis">
-                          {selectedDayEntries.length}{" "}
-                          {selectedDayEntries.length === 1
-                            ? "entry"
-                            : "entries"}
-                        </span>
-                      </div>
+              <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                  <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <h2 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      {format(selectedDate, "EEEE, MMMM dd")}
+                    </h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <Timer className="w-4 h-4" />
+                      <span className="font-dosis">
+                        {selectedDayEntries.length}{" "}
+                        {selectedDayEntries.length === 1 ? "entry" : "entries"}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
-                    <AnimatePresence>
-                      {selectedDayEntries.length === 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-center py-12"
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="max-w-4xl mx-auto space-y-3">
+                    {selectedDayEntries.length === 0 ? (
+                      <div className="text-center py-20">
+                        <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                        <h3 className="font-dosis text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No entries yet
+                        </h3>
+                        <p className="font-dosis text-gray-600 dark:text-gray-400 mb-6">
+                          Start tracking your time for this day
+                        </p>
+                        <Button
+                          onClick={() => setIsAddModalOpen(true)}
+                          className="font-dosis bg-orange-500 hover:bg-orange-600"
                         >
-                          <BookOpen className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                          <h4 className="font-dosis text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                            No entries yet
-                          </h4>
-                          <p className="font-dosis text-gray-600 dark:text-gray-400 mb-4">
-                            Start tracking your time for this day
-                          </p>
-                          <Button
-                            onClick={() => setIsAddModalOpen(true)}
-                            size="sm"
-                            className="font-dosis bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add First Entry
-                          </Button>
-                        </motion.div>
-                      ) : (
-                        selectedDayEntries.map((entry, index) => (
-                          <motion.div
-                            key={entry.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="group bg-gray-50/50 dark:bg-gray-700/30 rounded-xl p-4 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-200"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add First Entry
+                        </Button>
+                      </div>
+                    ) : (
+                      selectedDayEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-sm transition-all duration-200"
+                        >
+                          <div className="p-4">
+                            {editingEntry?.id === entry.id ? (
+                              // Edit Mode
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
                                   <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
-                                    {entry.taskId
-                                      ? "Task Entry"
-                                      : "Manual Entry"}
+                                    Edit Time Entry
                                   </h4>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                    <span className="font-mono">
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      onClick={handleEditEntry}
+                                      className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setEditingEntry(null)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="font-dosis text-sm font-medium mb-1 block">
+                                      Start Time
+                                    </label>
+                                    <div className="relative">
+                                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                      <Input
+                                        type="time"
+                                        value={editingEntry.startTime}
+                                        onChange={(e) =>
+                                          setEditingEntry((prev) =>
+                                            prev
+                                              ? {
+                                                  ...prev,
+                                                  startTime: e.target.value,
+                                                }
+                                              : null
+                                          )
+                                        }
+                                        className="font-dosis pl-10"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="font-dosis text-sm font-medium mb-1 block">
+                                      End Time
+                                    </label>
+                                    <div className="relative">
+                                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                      <Input
+                                        type="time"
+                                        value={editingEntry.endTime}
+                                        onChange={(e) =>
+                                          setEditingEntry((prev) =>
+                                            prev
+                                              ? {
+                                                  ...prev,
+                                                  endTime: e.target.value,
+                                                }
+                                              : null
+                                          )
+                                        }
+                                        className="font-dosis pl-10"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="font-dosis text-sm font-medium mb-1 block">
+                                    Description
+                                  </label>
+                                  <Textarea
+                                    value={editingEntry.description}
+                                    onChange={(e) =>
+                                      setEditingEntry((prev) =>
+                                        prev
+                                          ? {
+                                              ...prev,
+                                              description: e.target.value,
+                                            }
+                                          : null
+                                      )
+                                    }
+                                    className="font-dosis resize-none"
+                                    rows={2}
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              // View Mode
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 space-y-3">
+                                  <div className="flex items-center gap-3">
+                                    {entry.task ? (
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                                          {entry.task.title}
+                                        </h4>
+                                        <span
+                                          className={cn(
+                                            "px-2 py-1 rounded-md text-xs border font-medium",
+                                            getColumnColor(entry.task.column)
+                                          )}
+                                        >
+                                          {entry.task.column}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "px-2 py-1 rounded-md text-xs border font-medium flex items-center gap-1",
+                                            getPriorityColor(
+                                              entry.task.priority
+                                            )
+                                          )}
+                                        >
+                                          {getPriorityIcon(entry.task.priority)}
+                                          {entry.task.priority}
+                                        </span>
+                                        {entry.task.dueDate && (
+                                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {format(
+                                              new Date(entry.task.dueDate),
+                                              "MMM dd"
+                                            )}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <User className="w-4 h-4 text-gray-400" />
+                                        <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                                          Manual Entry
+                                        </h4>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <span className="font-mono flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
                                       {formatTime(entry.startTime)} -{" "}
                                       {entry.endTime
                                         ? formatTime(entry.endTime)
                                         : "ongoing"}
                                     </span>
-                                    <span className="px-2 py-1 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 rounded-md font-dosis font-medium">
+                                    <span className="px-2 py-1 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 rounded font-dosis font-medium">
                                       {formatDuration(entry.duration)}
                                     </span>
                                   </div>
+
+                                  {entry.description && (
+                                    <AnimatePresence>
+                                      <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{
+                                          opacity: expandedEntries.has(entry.id)
+                                            ? 1
+                                            : 0,
+                                          height: expandedEntries.has(entry.id)
+                                            ? "auto"
+                                            : 0,
+                                        }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                          {entry.description}
+                                        </p>
+                                      </motion.div>
+                                    </AnimatePresence>
+                                  )}
                                 </div>
 
-                                <AnimatePresence>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {entry.description && (
-                                    <motion.div
-                                      initial={{ opacity: 0, height: 0 }}
-                                      animate={{
-                                        opacity: expandedEntries.has(entry.id)
-                                          ? 1
-                                          : 0,
-                                        height: expandedEntries.has(entry.id)
-                                          ? "auto"
-                                          : 0,
-                                      }}
-                                      exit={{ opacity: 0, height: 0 }}
-                                      className="overflow-hidden"
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        toggleEntryExpansion(entry.id)
+                                      }
+                                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                                     >
-                                      <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mt-2 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                        {entry.description}
-                                      </p>
-                                    </motion.div>
+                                      {expandedEntries.has(entry.id) ? (
+                                        <ChevronUp className="w-4 h-4" />
+                                      ) : (
+                                        <ChevronDown className="w-4 h-4" />
+                                      )}
+                                    </Button>
                                   )}
-                                </AnimatePresence>
-                              </div>
-
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {entry.description && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() =>
-                                      toggleEntryExpansion(entry.id)
-                                    }
-                                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                    onClick={() => startEditingEntry(entry)}
+                                    className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
                                   >
-                                    {expandedEntries.has(entry.id) ? (
-                                      <ChevronUp className="w-4 h-4" />
-                                    ) : (
-                                      <ChevronDown className="w-4 h-4" />
-                                    )}
+                                    <Edit3 className="w-4 h-4" />
                                   </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingEntry(entry.id)}
-                                  className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteEntry(entry.id)}
-                                  className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteEntry(entry.id)}
+                                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        ))
-                      )}
-                    </AnimatePresence>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Weekly Summary */}
-              <motion.div variants={cardVariants} className="space-y-6">
-                {/* Weekly Stats Card */}
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-lg flex items-center justify-center">
-                      <Target className="w-5 h-5 text-white" />
+              {/* Weekly Summary Sidebar */}
+              <div className="w-80 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4">
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-lg flex items-center justify-center">
+                        <Target className="w-4 h-4 text-white" />
+                      </div>
+                      <h3 className="font-dosis text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        Weekly Summary
+                      </h3>
                     </div>
-                    <h3 className="font-dosis text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Weekly Summary
-                    </h3>
-                  </div>
 
-                  <div className="space-y-6">
-                    {/* Total Time */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg">
                         <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
                           Total Tracked
                         </span>
@@ -674,11 +891,8 @@ export default function TimesheetPage() {
                           {formatDuration(weeklyStats.total)}
                         </span>
                       </div>
-                    </div>
 
-                    {/* Daily Average */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg">
                         <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
                           Daily Average
                         </span>
@@ -686,62 +900,33 @@ export default function TimesheetPage() {
                           {formatDuration(weeklyStats.average)}
                         </span>
                       </div>
-                    </div>
 
-                    {/* Weekly Progress */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Weekly Goal
-                        </span>
-                        <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                          {Math.round(weeklyStats.progress)}%
-                        </span>
+                      <div className="p-3 bg-white dark:bg-gray-700 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                            Weekly Goal
+                          </span>
+                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                            {Math.round(weeklyStats.progress)}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full transition-all duration-1000"
+                            style={{ width: `${weeklyStats.progress}%` }}
+                          />
+                        </div>
+                        <p className="font-dosis text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          {formatDuration(weeklyStats.total)} of{" "}
+                          {currentWorkspace.weeklyGoals}h goal
+                        </p>
                       </div>
-                      <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <motion.div
-                          className="absolute left-0 top-0 h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full"
-                          variants={progressVariants}
-                          initial="hidden"
-                          animate="visible"
-                          custom={weeklyStats.progress}
-                        />
-                      </div>
-                      <p className="font-dosis text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        {formatDuration(weeklyStats.total)} of{" "}
-                        {currentWorkspace.weeklyGoals}h goal
-                      </p>
                     </div>
                   </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
-                  <h3 className="font-dosis text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                    Quick Actions
-                  </h3>
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      className="font-dosis w-full justify-start"
-                      onClick={() => setIsAddModalOpen(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Time Entry
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="font-dosis w-full justify-start"
-                      onClick={() => router.push("/dashboard")}
-                    >
-                      <Timer className="w-4 h-4 mr-2" />
-                      Start Timer
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
+              </div>
             </div>
-          </motion.main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </div>
