@@ -14,7 +14,10 @@ interface WorkspaceState {
   ) => Promise<string>;
   loadWorkspace: (workspaceId: string) => Promise<void>;
   updateWorkspaceSettings: (
-    settings: Partial<Workspace["settings"]>
+    settings: Partial<Workspace["settings"]> & {
+      columns?: string[];
+      weeklyGoals?: number;
+    }
   ) => Promise<void>;
   setTheme: (theme: Workspace["theme"]) => Promise<void>;
   setHydrated: () => void;
@@ -235,16 +238,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const { currentWorkspace } = get();
           if (!currentWorkspace) return;
 
-          const updatedSettings = { ...currentWorkspace.settings, ...settings };
-          const updatedWorkspace = {
-            ...currentWorkspace,
-            settings: updatedSettings,
-          };
+          // Separate columns and weeklyGoals from other settings
+          const { weeklyGoals, columns, ...otherSettings } = settings;
+
+          let updateData: any = {};
+
+          // Handle settings object updates
+          if (Object.keys(otherSettings).length > 0) {
+            const updatedSettings = {
+              ...currentWorkspace.settings,
+              ...otherSettings,
+            };
+            updateData.settings = updatedSettings;
+          }
+
+          // Handle weeklyGoals separately
+          if (weeklyGoals !== undefined) {
+            updateData.weeklyGoals = weeklyGoals;
+          }
+
+          // Handle columns separately
+          if (columns !== undefined) {
+            updateData.columns = columns;
+          }
+
+          const updatedWorkspace = { ...currentWorkspace, ...updateData };
 
           try {
-            await db.workspaces.update(currentWorkspace.id, {
-              settings: updatedSettings,
-            });
+            await db.workspaces.update(currentWorkspace.id, updateData);
             set({ currentWorkspace: updatedWorkspace });
           } catch (error) {
             console.error("Failed to update workspace settings:", error);
