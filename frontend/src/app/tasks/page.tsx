@@ -806,13 +806,18 @@ export default function TasksPage() {
                                                       task.isActive &&
                                                         "ring-2 ring-orange-200 dark:ring-orange-800 bg-orange-50/50 dark:bg-orange-950/20"
                                                     )}
+                                                    style={{
+                                                      userSelect: "none", // Prevent text selection
+                                                      ...provided.draggableProps
+                                                        .style,
+                                                    }}
                                                   >
-                                                    <div
-                                                      {...provided.dragHandleProps}
-                                                      className="p-4 space-y-3"
-                                                    >
+                                                    <div className="p-4 space-y-3">
                                                       {/* Title and Actions Row */}
-                                                      <div className="flex items-start justify-between gap-2">
+                                                      <div
+                                                        className="flex items-start justify-between gap-2"
+                                                        {...provided.dragHandleProps}
+                                                      >
                                                         <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed flex-1">
                                                           {task.title}
                                                         </h4>
@@ -821,6 +826,9 @@ export default function TasksPage() {
                                                         <div
                                                           className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                           onClick={(e) =>
+                                                            e.stopPropagation()
+                                                          }
+                                                          onMouseDown={(e) =>
                                                             e.stopPropagation()
                                                           }
                                                         >
@@ -1432,7 +1440,7 @@ export default function TasksPage() {
                               : null
                           );
                         }}
-                        initialFocus
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>
