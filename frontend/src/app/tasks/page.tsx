@@ -83,7 +83,12 @@ import {
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DropResult,
+} from "react-beautiful-dnd";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -305,7 +310,7 @@ export default function TasksPage() {
     }
   };
 
-  const onDragEnd = async (result: any) => {
+  const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -1477,8 +1482,8 @@ export default function TasksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{taskToDelete?.title}"? This
-              action cannot be undone.
+              Are you sure you want to delete this task? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1502,9 +1507,9 @@ export default function TasksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Column</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the "{columnToDelete}" column? All
-              tasks in this column will be moved to "Todo". This action cannot
-              be undone.
+              Are you sure you want to delete the &quot;{columnToDelete}&quot;
+              column? All tasks in this column will be moved to
+              &quot;Todo&quot;. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,16 +1,16 @@
 "use client";
 
-import { Dosis } from "next/font/google";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { useWorkspaceStore } from "@/store";
-import LandingHeader from "@/components/LandingHeader";
 import ActionButtons from "@/components/ActiveButtons";
+import LandingHeader from "@/components/LandingHeader";
 import TakuMascot from "@/components/TakuMascot";
-import WorkspaceModal from "@/components/WorkspaceModal";
 import UserInfoModal from "@/components/UserInfoModal";
+import WorkspaceModal from "@/components/WorkspaceModal";
+import { useWorkspaceStore } from "@/store";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -75,7 +75,7 @@ export default function Home() {
     role: "Student" | "Developer" | "Designer" | "Other";
   }) => {
     try {
-      const workspaceId = await createWorkspace({
+      await createWorkspace({
         name: workspaceName,
         ownerName: userInfo.name,
         role: userInfo.role,

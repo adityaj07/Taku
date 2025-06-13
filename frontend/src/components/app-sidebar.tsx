@@ -26,7 +26,6 @@ import {
 import { Dosis } from "next/font/google";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -66,16 +65,6 @@ const items = [
 export function AppSidebar() {
   const { currentWorkspace } = useWorkspaceStore();
   const pathname = usePathname();
-  const [hasAnimated, setHasAnimated] = useState(false);
-
-  // Only animate on initial mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setHasAnimated(true);
-    }, 1000); // Allow time for initial animations to complete
-
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <div className={dosis.variable}>
@@ -117,7 +106,7 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {items.map((item, index) => {
+                {items.map((item) => {
                   const isActive = pathname === item.url;
                   return (
                     <SidebarMenuItem key={item.title}>

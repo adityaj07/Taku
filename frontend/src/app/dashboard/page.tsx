@@ -55,7 +55,12 @@ import {
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DropResult,
+} from "react-beautiful-dnd";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -69,10 +74,10 @@ const containerVariants = {
   visible: { opacity: 1, transition: { duration: 0.3 } },
 };
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-};
+// const cardVariants = {
+//   hidden: { opacity: 0, y: 10 },
+//   visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
+// };
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -87,7 +92,7 @@ export default function DashboardPage() {
     stopTimer,
     addTask,
   } = useWorkspaceStore();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const currentTime = new Date();
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
@@ -119,26 +124,26 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [currentWorkspace?.tasks]);
 
-  const generateHeatmapData = () => {
-    if (!currentWorkspace) return [];
+  // const generateHeatmapData = () => {
+  //   if (!currentWorkspace) return [];
 
-    // Generate mock data based on time entries
-    const data = [];
-    const startDate = new Date(new Date().getFullYear(), 0, 1);
-    const endDate = new Date();
+  //   // Generate mock data based on time entries
+  //   const data = [];
+  //   const startDate = new Date(new Date().getFullYear(), 0, 1);
+  //   const endDate = new Date();
 
-    for (
-      let d = new Date(startDate);
-      d <= endDate;
-      d.setDate(d.getDate() + 1)
-    ) {
-      const dateStr = d.toISOString().split("T")[0];
-      const value = Math.floor(Math.random() * 5);
-      data.push({ date: dateStr, value });
-    }
+  //   for (
+  //     let d = new Date(startDate);
+  //     d <= endDate;
+  //     d.setDate(d.getDate() + 1)
+  //   ) {
+  //     const dateStr = d.toISOString().split("T")[0];
+  //     const value = Math.floor(Math.random() * 5);
+  //     data.push({ date: dateStr, value });
+  //   }
 
-    return data;
-  };
+  //   return data;
+  // };
 
   if (!isHydrated || isLoading || !currentWorkspace) {
     return (
@@ -209,7 +214,7 @@ export default function DashboardPage() {
   const handleTaskEdit = async (
     taskId: string,
     field: keyof Task,
-    value: any
+    value: string | number | boolean | Date | null
   ) => {
     await updateTask(taskId, { [field]: value });
     setEditingTask(null);
@@ -244,11 +249,7 @@ export default function DashboardPage() {
     }
   };
 
-  const onDragEnd = async (result: {
-    destination: any;
-    source: any;
-    draggableId: any;
-  }) => {
+  const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     // If dropped outside a valid drop zone
@@ -355,7 +356,7 @@ export default function DashboardPage() {
                       {currentWorkspace.ownerName.split(" ")[0]} 👋
                     </h1>
                     <p className="font-dosis text-gray-600 dark:text-gray-400">
-                      Here's how your week is looking.
+                      Here&apos;s how your week is looking.
                     </p>
                   </div>
 
@@ -743,8 +744,8 @@ export default function DashboardPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{taskToDelete?.title}"? This
-              action cannot be undone.
+              Are you sure you want to delete this task? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

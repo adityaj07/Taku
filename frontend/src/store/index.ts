@@ -241,7 +241,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Separate columns and weeklyGoals from other settings
           const { weeklyGoals, columns, ...otherSettings } = settings;
 
-          let updateData: any = {};
+          const updateData: Partial<
+            Pick<Workspace, "settings" | "weeklyGoals" | "columns">
+          > = {};
 
           // Handle settings object updates
           if (Object.keys(otherSettings).length > 0) {

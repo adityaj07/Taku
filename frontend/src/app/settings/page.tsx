@@ -390,7 +390,13 @@ export default function SettingsPage() {
                             {editingProfile ? (
                               <Select
                                 value={profileForm.role}
-                                onValueChange={(value: any) =>
+                                onValueChange={(
+                                  value:
+                                    | "Student"
+                                    | "Developer"
+                                    | "Designer"
+                                    | "Other"
+                                ) =>
                                   setProfileForm((prev) => ({
                                     ...prev,
                                     role: value,
@@ -838,7 +844,7 @@ export default function SettingsPage() {
               </AlertDialogTitle>
               <AlertDialogDescription className="font-dosis space-y-3">
                 <p>
-                  You're about to import workspace data from{" "}
+                  You&apos;re about to import workspace data from{" "}
                   <strong>{importFile?.name}</strong>.
                 </p>
                 <div className="space-y-2">

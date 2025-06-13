@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X, User, Briefcase, ArrowRight } from "lucide-react";
+import { X, User, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 interface UserInfoModalProps {
@@ -134,7 +134,7 @@ export default function UserInfoModal({
                     htmlFor="user-name"
                     className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
-                    What's your name?
+                    What&apos;s your name?
                   </label>
                   <input
                     id="user-name"
@@ -151,7 +151,7 @@ export default function UserInfoModal({
                 {/* Role selection */}
                 <div className="space-y-3">
                   <label className="font-dosis text-sm font-medium text-gray-700 dark:text-gray-300">
-                    What's your role?
+                    What&apos;s your role?
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {roles.map((role) => (
