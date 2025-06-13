@@ -73,25 +73,12 @@ const dosis = Dosis({
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
+  visible: { opacity: 1, transition: { duration: 0.3 } },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 export default function SettingsPage() {
@@ -260,7 +247,7 @@ export default function SettingsPage() {
   if (!isHydrated || isLoading || !currentWorkspace) {
     return (
       <div
-        className={`${dosis.variable} min-h-screen flex items-center justify-center`}
+        className={`${dosis.variable} min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900`}
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
@@ -274,369 +261,471 @@ export default function SettingsPage() {
 
   return (
     <TooltipProvider>
-      <div className={dosis.variable}>
+      <div
+        className={`${dosis.variable} h-screen flex bg-gray-50 dark:bg-gray-900`}
+      >
         <SidebarProvider>
           <AppSidebar />
-          <SidebarInset>
-            {/* Header with Breadcrumbs */}
-            <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-2 px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink
-                        href="/dashboard"
-                        className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                      >
-                        {currentWorkspace.name}
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Settings
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
+          <SidebarInset className="flex flex-col">
+            {/* Header */}
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink
+                      href="/dashboard"
+                      className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    >
+                      {currentWorkspace.name}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Settings
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
             </header>
 
             {/* Main Content */}
-            <motion.main
-              className="flex-1 p-6 space-y-8 max-w-4xl mx-auto"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* Page Header */}
-              <motion.div variants={cardVariants} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Settings className="w-8 h-8 text-orange-500" />
-                  <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
-                    Settings
-                  </h1>
-                </div>
-                <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
-                  Customize your Taku experience
-                </p>
-              </motion.div>
-
-              {/* User & Workspace Settings */}
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <User className="w-5 h-5 text-blue-500" />
-                      <CardTitle className="font-dosis">
-                        User & Workspace
-                      </CardTitle>
+              <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-lg flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-white" />
                     </div>
-                    {!editingProfile ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingProfile(true)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleProfileSave}
-                          className="h-8 w-8 p-0 text-green-600"
-                        >
-                          <Save className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingProfile(false)}
-                          className="h-8 w-8 p-0 text-red-600"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="font-dosis text-sm font-medium">
-                          Display Name
-                        </Label>
-                        {editingProfile ? (
-                          <Input
-                            value={profileForm.name}
-                            onChange={(e) =>
-                              setProfileForm((prev) => ({
-                                ...prev,
-                                name: e.target.value,
-                              }))
-                            }
-                            className="font-dosis"
-                          />
-                        ) : (
-                          <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            {currentWorkspace.ownerName}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-dosis text-sm font-medium">
-                          Role
-                        </Label>
-                        {editingProfile ? (
-                          <Select
-                            value={profileForm.role}
-                            onValueChange={(value: any) =>
-                              setProfileForm((prev) => ({
-                                ...prev,
-                                role: value,
-                              }))
-                            }
+                    <div>
+                      <h1 className="font-dosis text-xl font-semibold text-gray-900 dark:text-gray-100">
+                        Settings
+                      </h1>
+                      <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                        Customize your Taku experience
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4">
+                <motion.div
+                  className="max-w-4xl mx-auto space-y-6"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {/* User & Workspace Settings */}
+                  <motion.div variants={cardVariants}>
+                    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <User className="w-5 h-5 text-blue-500" />
+                          <CardTitle className="font-dosis">
+                            User & Workspace
+                          </CardTitle>
+                        </div>
+                        {!editingProfile ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingProfile(true)}
+                            className="h-8 w-8 p-0"
                           >
-                            <SelectTrigger className="font-dosis">
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleProfileSave}
+                              className="h-8 w-8 p-0 text-green-600"
+                            >
+                              <Save className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingProfile(false)}
+                              className="h-8 w-8 p-0 text-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="font-dosis text-sm font-medium">
+                              Display Name
+                            </Label>
+                            {editingProfile ? (
+                              <Input
+                                value={profileForm.name}
+                                onChange={(e) =>
+                                  setProfileForm((prev) => ({
+                                    ...prev,
+                                    name: e.target.value,
+                                  }))
+                                }
+                                className="font-dosis"
+                              />
+                            ) : (
+                              <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                {currentWorkspace.ownerName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="font-dosis text-sm font-medium">
+                              Role
+                            </Label>
+                            {editingProfile ? (
+                              <Select
+                                value={profileForm.role}
+                                onValueChange={(value: any) =>
+                                  setProfileForm((prev) => ({
+                                    ...prev,
+                                    role: value,
+                                  }))
+                                }
+                              >
+                                <SelectTrigger className="font-dosis">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Student">
+                                    Student
+                                  </SelectItem>
+                                  <SelectItem value="Developer">
+                                    Developer
+                                  </SelectItem>
+                                  <SelectItem value="Designer">
+                                    Designer
+                                  </SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                {currentWorkspace.role}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-dosis text-sm font-medium">
+                            Workspace Name
+                          </Label>
+                          <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                            {currentWorkspace.name}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-dosis text-sm font-medium">
+                            Theme
+                          </Label>
+                          <Select
+                            value={currentWorkspace.theme}
+                            onValueChange={handleThemeChange}
+                          >
+                            <SelectTrigger className="font-dosis w-48">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Student">Student</SelectItem>
-                              <SelectItem value="Developer">
-                                Developer
+                              <SelectItem value="system">
+                                <div className="flex items-center gap-2">
+                                  <Palette className="w-4 h-4" />
+                                  System
+                                </div>
                               </SelectItem>
-                              <SelectItem value="Designer">Designer</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
+                              <SelectItem value="light">
+                                <div className="flex items-center gap-2">
+                                  <Eye className="w-4 h-4" />
+                                  Light
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="dark">
+                                <div className="flex items-center gap-2">
+                                  <EyeOff className="w-4 h-4" />
+                                  Dark
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
-                        ) : (
-                          <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            {currentWorkspace.role}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-dosis text-sm font-medium">
-                        Workspace Name
-                      </Label>
-                      <p className="font-dosis p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                        {currentWorkspace.name}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-dosis text-sm font-medium">
-                        Theme
-                      </Label>
-                      <Select
-                        value={currentWorkspace.theme}
-                        onValueChange={handleThemeChange}
-                      >
-                        <SelectTrigger className="font-dosis w-48">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="system">
-                            <div className="flex items-center gap-2">
-                              <Palette className="w-4 h-4" />
-                              System
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="light">
-                            <div className="flex items-center gap-2">
-                              <Eye className="w-4 h-4" />
-                              Light
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="dark">
-                            <div className="flex items-center gap-2">
-                              <EyeOff className="w-4 h-4" />
-                              Dark
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Backup & Restore */}
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-green-500" />
-                      <CardTitle className="font-dosis">
-                        Backup & Restore
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Export Workspace
-                          </h4>
-                          <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            Download your workspace data as a JSON file for
-                            backup or transfer.
-                          </p>
-                          <Button
-                            onClick={handleExportWorkspace}
-                            className="font-dosis bg-green-500 hover:bg-green-600 w-full"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Export Workspace
-                          </Button>
                         </div>
-                        {lastExported && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 font-dosis">
-                            Last exported:{" "}
-                            {new Date(lastExported).toLocaleString()}
-                          </div>
-                        )}
-                      </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
 
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Import Workspace
-                          </h4>
-                          <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            Upload a JSON file to restore or merge workspace
-                            data.
-                          </p>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                  {/* Backup & Restore */}
+                  <motion.div variants={cardVariants}>
+                    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-green-500" />
+                          <CardTitle className="font-dosis">
+                            Backup & Restore
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Export Workspace
+                              </h4>
+                              <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                Download your workspace data as a JSON file for
+                                backup or transfer.
+                              </p>
                               <Button
-                                onClick={handleImportWorkspace}
-                                variant="outline"
-                                className="font-dosis w-full"
+                                onClick={handleExportWorkspace}
+                                className="font-dosis bg-green-500 hover:bg-green-600 w-full"
                               >
-                                <Upload className="w-4 h-4 mr-2" />
-                                Import Workspace
+                                <Download className="w-4 h-4 mr-2" />
+                                Export Workspace
                               </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                <span>
-                                  Importing may overwrite existing data
-                                </span>
+                            </div>
+                            {lastExported && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-dosis">
+                                Last exported:{" "}
+                                {new Date(lastExported).toLocaleString()}
                               </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                            )}
+                          </div>
 
-              {/* Goals & Productivity Settings */}
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Target className="w-5 h-5 text-purple-500" />
-                      <CardTitle className="font-dosis">
-                        Goals & Productivity
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="font-dosis font-medium">
-                            Weekly Goals
-                          </Label>
-                          <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                            Set your target hours per week
-                          </p>
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Import Workspace
+                              </h4>
+                              <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                Upload a JSON file to restore or merge workspace
+                                data.
+                              </p>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    onClick={handleImportWorkspace}
+                                    variant="outline"
+                                    className="font-dosis w-full"
+                                  >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Import Workspace
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                    <span>
+                                      Importing may overwrite existing data
+                                    </span>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {editingGoals ? (
-                            <>
-                              <Input
-                                type="number"
-                                value={weeklyGoalsInput}
-                                onChange={(e) =>
-                                  setWeeklyGoalsInput(e.target.value)
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Goals & Productivity Settings */}
+                  <motion.div variants={cardVariants}>
+                    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Target className="w-5 h-5 text-purple-500" />
+                          <CardTitle className="font-dosis">
+                            Goals & Productivity
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="font-dosis font-medium">
+                                Weekly Goals
+                              </Label>
+                              <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                                Set your target hours per week
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {editingGoals ? (
+                                <>
+                                  <Input
+                                    type="number"
+                                    value={weeklyGoalsInput}
+                                    onChange={(e) =>
+                                      setWeeklyGoalsInput(e.target.value)
+                                    }
+                                    className="w-20 font-dosis"
+                                    min="1"
+                                    max="168"
+                                  />
+                                  <span className="font-dosis text-sm text-gray-600">
+                                    hours
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleGoalsSave}
+                                    className="h-8 w-8 p-0 text-green-600"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingGoals(false);
+                                      setWeeklyGoalsInput(
+                                        currentWorkspace.weeklyGoals.toString()
+                                      );
+                                    }}
+                                    className="h-8 w-8 p-0 text-red-600"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="font-dosis font-semibold">
+                                    {currentWorkspace.weeklyGoals} hours
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingGoals(true)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-4">
+                            <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                              Display Settings
+                            </h4>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="font-dosis font-medium">
+                                  Activity Heatmap
+                                </Label>
+                                <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                                  Show activity heatmap on goals page
+                                </p>
+                              </div>
+                              <Switch
+                                checked={currentWorkspace.settings.heatmap}
+                                onCheckedChange={(checked) =>
+                                  handleSettingToggle("heatmap", checked)
                                 }
-                                className="w-20 font-dosis"
-                                min="1"
-                                max="168"
                               />
-                              <span className="font-dosis text-sm text-gray-600">
-                                hours
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleGoalsSave}
-                                className="h-8 w-8 p-0 text-green-600"
-                              >
-                                <Save className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingGoals(false);
-                                  setWeeklyGoalsInput(
-                                    currentWorkspace.weeklyGoals.toString()
-                                  );
-                                }}
-                                className="h-8 w-8 p-0 text-red-600"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-dosis font-semibold">
-                                {currentWorkspace.weeklyGoals} hours
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingGoals(true)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="font-dosis font-medium">
+                                  Mascot
+                                </Label>
+                                <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                                  Show mascot illustrations
+                                </p>
+                              </div>
+                              <Switch
+                                checked={currentWorkspace.settings.mascot}
+                                onCheckedChange={(checked) =>
+                                  handleSettingToggle("mascot", checked)
+                                }
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="font-dosis font-medium">
+                                  Compact Mode
+                                </Label>
+                                <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                                  Use compact layout for better screen space
+                                  usage
+                                </p>
+                              </div>
+                              <Switch
+                                checked={currentWorkspace.settings.compactMode}
+                                onCheckedChange={(checked) =>
+                                  handleSettingToggle("compactMode", checked)
+                                }
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="font-dosis font-medium">
+                                  Auto Backup
+                                </Label>
+                                <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                                  Automatically backup workspace data
+                                </p>
+                              </div>
+                              <Switch
+                                checked={currentWorkspace.settings.autoBackup}
+                                onCheckedChange={(checked) =>
+                                  handleSettingToggle("autoBackup", checked)
+                                }
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
 
-                      <Separator />
-
-                      <div className="space-y-4">
-                        <h4 className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                          Display Settings
-                        </h4>
-
+                  {/* Notification Settings */}
+                  <motion.div variants={cardVariants}>
+                    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <Bell className="w-5 h-5 text-orange-500" />
+                          <CardTitle className="font-dosis">
+                            Notifications
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <Label className="font-dosis font-medium">
-                              Activity Heatmap
+                              Task Reminders
                             </Label>
                             <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              Show activity heatmap on goals page
+                              Get reminded about overdue tasks
                             </p>
                           </div>
                           <Switch
-                            checked={currentWorkspace.settings.heatmap}
+                            checked={notificationSettings.taskReminders}
                             onCheckedChange={(checked) =>
-                              handleSettingToggle("heatmap", checked)
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                taskReminders: checked,
+                              }))
                             }
                           />
                         </div>
@@ -644,16 +733,20 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <Label className="font-dosis font-medium">
-                              Mascot
+                              Goal Progress
                             </Label>
                             <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              Show mascot illustrations
+                              Notifications about weekly and monthly goal
+                              progress
                             </p>
                           </div>
                           <Switch
-                            checked={currentWorkspace.settings.mascot}
+                            checked={notificationSettings.goalProgress}
                             onCheckedChange={(checked) =>
-                              handleSettingToggle("mascot", checked)
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                goalProgress: checked,
+                              }))
                             }
                           />
                         </div>
@@ -661,16 +754,19 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <Label className="font-dosis font-medium">
-                              Compact Mode
+                              Weekly Reports
                             </Label>
                             <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              Use compact layout for better screen space usage
+                              Receive weekly productivity summaries
                             </p>
                           </div>
                           <Switch
-                            checked={currentWorkspace.settings.compactMode}
+                            checked={notificationSettings.weeklyReports}
                             onCheckedChange={(checked) =>
-                              handleSettingToggle("compactMode", checked)
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                weeklyReports: checked,
+                              }))
                             }
                           />
                         </div>
@@ -678,140 +774,48 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <Label className="font-dosis font-medium">
-                              Auto Backup
+                              Deadline Alerts
                             </Label>
                             <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              Automatically backup workspace data
+                              Alerts for upcoming task deadlines
                             </p>
                           </div>
                           <Switch
-                            checked={currentWorkspace.settings.autoBackup}
+                            checked={notificationSettings.deadlineAlerts}
                             onCheckedChange={(checked) =>
-                              handleSettingToggle("autoBackup", checked)
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                deadlineAlerts: checked,
+                              }))
                             }
                           />
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
-              {/* Notification Settings */}
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Bell className="w-5 h-5 text-orange-500" />
-                      <CardTitle className="font-dosis">
-                        Notifications
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-dosis font-medium">
-                          Task Reminders
-                        </Label>
-                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Get reminded about overdue tasks
-                        </p>
-                      </div>
-                      <Switch
-                        checked={notificationSettings.taskReminders}
-                        onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            taskReminders: checked,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-dosis font-medium">
-                          Goal Progress
-                        </Label>
-                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Notifications about weekly and monthly goal progress
-                        </p>
-                      </div>
-                      <Switch
-                        checked={notificationSettings.goalProgress}
-                        onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            goalProgress: checked,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-dosis font-medium">
-                          Weekly Reports
-                        </Label>
-                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Receive weekly productivity summaries
-                        </p>
-                      </div>
-                      <Switch
-                        checked={notificationSettings.weeklyReports}
-                        onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            weeklyReports: checked,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-dosis font-medium">
-                          Deadline Alerts
-                        </Label>
-                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Alerts for upcoming task deadlines
-                        </p>
-                      </div>
-                      <Switch
-                        checked={notificationSettings.deadlineAlerts}
-                        onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            deadlineAlerts: checked,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-dosis font-medium">
-                          Timer Notifications
-                        </Label>
-                        <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                          Notifications when timers start/stop
-                        </p>
-                      </div>
-                      <Switch
-                        checked={notificationSettings.timerNotifications}
-                        onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            timerNotifications: checked,
-                          }))
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.main>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="font-dosis font-medium">
+                              Timer Notifications
+                            </Label>
+                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                              Notifications when timers start/stop
+                            </p>
+                          </div>
+                          <Switch
+                            checked={notificationSettings.timerNotifications}
+                            onCheckedChange={(checked) =>
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                timerNotifications: checked,
+                              }))
+                            }
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </motion.div>
+              </div>
+            </div>
           </SidebarInset>
         </SidebarProvider>
 

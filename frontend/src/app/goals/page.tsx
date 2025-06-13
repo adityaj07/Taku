@@ -34,14 +34,13 @@ import {
   startOfYear,
   subDays,
 } from "date-fns";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Award,
   Calendar,
   Edit3,
   Flame,
   Save,
-  Sparkles,
   Target,
   TrendingUp,
   Trophy,
@@ -57,53 +56,11 @@ const dosis = Dosis({
   variable: "--font-dosis",
 });
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
-};
-
-const streakVariants = {
-  pulse: {
-    scale: [1, 1.05, 1],
-    transition: {
-      duration: 2,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  },
-};
-
 interface HeatmapDay {
   date: Date;
   value: number;
   tasksCompleted: number;
   timeTracked: number;
-}
-
-interface WorkspaceSettings {
-  heatmap: boolean;
-  mascot: boolean;
-  autoBackup: boolean;
-  compactMode: boolean;
-  weeklyGoals: number;
 }
 
 export default function GoalsPage() {
@@ -118,30 +75,11 @@ export default function GoalsPage() {
   const [editingMonthlyGoal, setEditingMonthlyGoal] = useState(false);
   const [monthlyGoalInput, setMonthlyGoalInput] = useState("");
 
-  // Motivational quotes
-  const motivationalQuotes = [
-    "One step at a time builds the stairway to success! 🚀",
-    "Consistency beats perfection every time! ⭐",
-    "You're building something amazing, keep going! 💪",
-    "Small progress is still progress! 🌱",
-    "Your future self will thank you! ✨",
-  ];
-
-  const [currentQuote, setCurrentQuote] = useState(0);
-
   useEffect(() => {
     if (isHydrated && !isLoading && !currentWorkspace) {
       router.push("/");
     }
   }, [currentWorkspace, isLoading, isHydrated, router]);
-
-  // Rotate motivational quotes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentQuote((prev) => (prev + 1) % motivationalQuotes.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [motivationalQuotes.length]);
 
   // Initialize goal inputs
   useEffect(() => {
@@ -283,7 +221,7 @@ export default function GoalsPage() {
   const handleWeeklyGoalSave = async () => {
     const newGoal = parseInt(weeklyGoalInput);
     if (!isNaN(newGoal) && newGoal > 0) {
-      // await updateWorkspaceSettings({ weeklyGoals: newGoal });
+      await updateWorkspaceSettings({ weeklyGoals: newGoal });
       setEditingWeeklyGoal(false);
     }
   };
@@ -304,7 +242,7 @@ export default function GoalsPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="font-dosis text-gray-600 dark:text-gray-300">
-            Loading your goals...
+            Loading...
           </p>
         </div>
       </div>
@@ -323,147 +261,136 @@ export default function GoalsPage() {
 
   return (
     <div
-      className={`${dosis.variable} min-h-screen bg-gray-50 dark:bg-gray-900`}
+      className={`${dosis.variable} h-screen flex bg-gray-50 dark:bg-gray-900`}
     >
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          {/* Header with Breadcrumbs */}
-          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="/dashboard"
-                      className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    >
-                      {currentWorkspace.name}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Goals & Streaks
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
+        <SidebarInset className="flex flex-col">
+          {/* Header */}
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink
+                    href="/dashboard"
+                    className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    {currentWorkspace.name}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Goals
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </header>
 
           {/* Main Content */}
-          <TooltipProvider>
-            <motion.main
-              className="flex-1 p-6 space-y-8 max-w-7xl mx-auto"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {/* Page Header */}
-              <motion.div variants={cardVariants} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 10, 0] }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      repeatDelay: 3,
-                    }}
-                  >
-                    <Flame className="w-8 h-8 text-orange-500" />
-                  </motion.div>
-                  <div>
-                    <h1 className="font-dosis text-3xl font-bold text-gray-900 dark:text-gray-100">
-                      Goals & Streaks
+          <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
+            <TooltipProvider>
+              <div className="flex-1 p-6 space-y-6 max-w-7xl mx-auto overflow-y-auto">
+                {/* Page Header */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h1 className="font-dosis text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      Goals
                     </h1>
-                    <p className="font-dosis text-lg text-gray-600 dark:text-gray-400">
-                      Build momentum and track your progress
+                    <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                      Track your progress and build consistency
                     </p>
                   </div>
                 </div>
-              </motion.div>
 
-              {/* Top Row - Streak Counter & Quick Stats */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Streak Counter */}
-                <motion.div variants={cardVariants}>
-                  <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-orange-200/50 dark:border-orange-800/50">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Current Streak */}
+                  <Card className="relative overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <motion.div
-                            variants={streakAtRisk ? streakVariants : {}}
-                            animate={streakAtRisk ? "pulse" : ""}
-                          >
-                            <Flame
-                              className={`w-6 h-6 ${
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/50 rounded-lg flex items-center justify-center">
+                            <motion.div
+                              animate={
                                 streakAtRisk
-                                  ? "text-red-500"
-                                  : "text-orange-500"
-                              }`}
-                            />
-                          </motion.div>
-                          <span className="font-dosis font-medium text-gray-700 dark:text-gray-300">
-                            Current Streak
-                          </span>
+                                  ? { scale: [1, 1.1, 1] }
+                                  : { rotate: [0, 5, -5, 5, 0] }
+                              }
+                              transition={{
+                                duration: streakAtRisk ? 1 : 2,
+                                repeat: Infinity,
+                                repeatDelay: streakAtRisk ? 0 : 3,
+                              }}
+                            >
+                              <Flame
+                                className={`w-5 h-5 ${
+                                  streakAtRisk
+                                    ? "text-red-500"
+                                    : "text-orange-600 dark:text-orange-400"
+                                }`}
+                              />
+                            </motion.div>
+                          </div>
+                          <div>
+                            <h3 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                              Current Streak
+                            </h3>
+                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                              Days in a row
+                            </p>
+                          </div>
                         </div>
                         {streakAtRisk && (
-                          <motion.div
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                            className="text-xs font-dosis text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/30 px-2 py-1 rounded-full"
-                          >
-                            At Risk!
-                          </motion.div>
+                          <span className="text-xs font-dosis font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/30 px-2 py-1 rounded-full">
+                            At Risk
+                          </span>
                         )}
                       </div>
-                      <div className="text-center">
-                        <motion.div
-                          className="text-4xl font-bold font-dosis text-gray-900 dark:text-gray-100 mb-2"
-                          animate={
-                            streakData.current > 0
-                              ? { scale: [1, 1.05, 1] }
-                              : {}
-                          }
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            repeatDelay: 2,
-                          }}
-                        >
-                          {streakData.current}
-                        </motion.div>
-                        <p className="font-dosis text-gray-600 dark:text-gray-400">
-                          {streakData.current === 1 ? "day" : "days"} in a row
-                        </p>
+                      <div className="space-y-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold font-dosis text-gray-900 dark:text-gray-100">
+                            {streakData.current}
+                          </span>
+                          <span className="font-dosis text-gray-600 dark:text-gray-400">
+                            {streakData.current === 1 ? "day" : "days"}
+                          </span>
+                        </div>
                         {streakData.longest > streakData.current && (
-                          <p className="font-dosis text-sm text-gray-500 dark:text-gray-500 mt-2">
-                            Personal best: {streakData.longest} days
+                          <p className="font-dosis text-sm text-gray-500 dark:text-gray-500">
+                            Best: {streakData.longest} days
                           </p>
                         )}
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
 
-                {/* Weekly Goal Progress */}
-                <motion.div variants={cardVariants}>
+                  {/* Weekly Goal */}
                   <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Target className="w-5 h-5 text-teal-500" />
-                          <span className="font-dosis">Weekly Goal</span>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-teal-100 dark:bg-teal-950/50 rounded-lg flex items-center justify-center">
+                            <Target className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                              Weekly Goal
+                            </h3>
+                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                              Hours tracked
+                            </p>
+                          </div>
                         </div>
                         {!editingWeeklyGoal ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditingWeeklyGoal(true)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
                           >
                             <Edit3 className="w-4 h-4" />
                           </Button>
@@ -473,7 +400,7 @@ export default function GoalsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={handleWeeklyGoalSave}
-                              className="h-8 w-8 p-0 text-green-600"
+                              className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20"
                             >
                               <Save className="w-4 h-4" />
                             </Button>
@@ -486,22 +413,20 @@ export default function GoalsPage() {
                                   currentWorkspace.weeklyGoals.toString()
                                 );
                               }}
-                              className="h-8 w-8 p-0 text-red-600"
+                              className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                             >
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
                         )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                            Progress
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold font-dosis text-gray-900 dark:text-gray-100">
+                            {weeklyProgress.current.toFixed(1)}h
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                            {weeklyProgress.current.toFixed(1)}h /{" "}
+                          <span className="font-dosis text-gray-600 dark:text-gray-400">
+                            /
                             {editingWeeklyGoal ? (
                               <Input
                                 value={weeklyGoalInput}
@@ -521,50 +446,55 @@ export default function GoalsPage() {
                                 autoFocus
                               />
                             ) : (
-                              weeklyProgress.goal
+                              ` ${weeklyProgress.goal}`
                             )}
                             h
                           </span>
                         </div>
-                        <Progress
-                          value={weeklyProgress.percentage}
-                          className="h-3"
-                        />
-                        <div className="text-center">
-                          {weeklyProgress.percentage >= 100 ? (
-                            <p className="font-dosis text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-1">
-                              <Trophy className="w-4 h-4" />
-                              Goal achieved! 🎉
-                            </p>
-                          ) : (
-                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              {(
-                                weeklyProgress.goal - weeklyProgress.current
-                              ).toFixed(1)}
-                              h remaining
-                            </p>
-                          )}
+                        <div className="space-y-2">
+                          <Progress
+                            value={weeklyProgress.percentage}
+                            className="h-2"
+                          />
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-dosis text-gray-600 dark:text-gray-400">
+                              {Math.round(weeklyProgress.percentage)}% complete
+                            </span>
+                            {weeklyProgress.percentage >= 100 && (
+                              <span className="font-dosis text-green-600 dark:text-green-400 flex items-center gap-1">
+                                <Trophy className="w-3 h-3" />
+                                Goal reached!
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
 
-                {/* Monthly Task Goal */}
-                <motion.div variants={cardVariants}>
+                  {/* Monthly Tasks */}
                   <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Award className="w-5 h-5 text-purple-500" />
-                          <span className="font-dosis">Monthly Tasks</span>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950/50 rounded-lg flex items-center justify-center">
+                            <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-dosis font-medium text-gray-900 dark:text-gray-100">
+                              Monthly Tasks
+                            </h3>
+                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                              Tasks completed
+                            </p>
+                          </div>
                         </div>
                         {!editingMonthlyGoal ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditingMonthlyGoal(true)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
                           >
                             <Edit3 className="w-4 h-4" />
                           </Button>
@@ -574,7 +504,7 @@ export default function GoalsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={handleMonthlyGoalSave}
-                              className="h-8 w-8 p-0 text-green-600"
+                              className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20"
                             >
                               <Save className="w-4 h-4" />
                             </Button>
@@ -585,22 +515,20 @@ export default function GoalsPage() {
                                 setEditingMonthlyGoal(false);
                                 setMonthlyGoalInput(monthlyTaskGoal.toString());
                               }}
-                              className="h-8 w-8 p-0 text-red-600"
+                              className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                             >
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
                         )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                            Completed
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold font-dosis text-gray-900 dark:text-gray-100">
+                            {monthlyTaskProgress.current}
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                            {monthlyTaskProgress.current} /{" "}
+                          <span className="font-dosis text-gray-600 dark:text-gray-400">
+                            /
                             {editingMonthlyGoal ? (
                               <Input
                                 value={monthlyGoalInput}
@@ -621,159 +549,119 @@ export default function GoalsPage() {
                                 autoFocus
                               />
                             ) : (
-                              monthlyTaskProgress.goal
+                              ` ${monthlyTaskProgress.goal}`
                             )}
                           </span>
                         </div>
-                        <Progress
-                          value={monthlyTaskProgress.percentage}
-                          className="h-3"
-                        />
-                        <div className="text-center">
-                          {monthlyTaskProgress.percentage >= 100 ? (
-                            <p className="font-dosis text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-1">
-                              <Trophy className="w-4 h-4" />
-                              Monthly goal crushed! 💪
-                            </p>
-                          ) : (
-                            <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                              {monthlyTaskProgress.goal -
-                                monthlyTaskProgress.current}{" "}
-                              tasks to go
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-
-              {/* Activity Heatmap */}
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-500" />
-                      <span className="font-dosis">Activity Heatmap</span>
-                    </CardTitle>
-                    <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                      Your daily activity over the past year
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Heatmap Grid */}
-                      <div className="overflow-x-auto">
-                        <div className="grid grid-cols-53 gap-1 min-w-[800px]">
-                          {heatmapData.map((day, index) => (
-                            <Tooltip key={index}>
-                              <TooltipTrigger asChild>
-                                <motion.div
-                                  className={`w-3 h-3 rounded-sm cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-orange-300 dark:hover:ring-orange-600 ${getActivityColor(
-                                    day.value
-                                  )}`}
-                                  whileHover={{ scale: 1.2 }}
-                                  transition={{
-                                    type: "spring",
-                                    stiffness: 400,
-                                  }}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="text-center space-y-1">
-                                  <p className="font-dosis font-semibold">
-                                    {format(day.date, "MMM dd, yyyy")}
-                                  </p>
-                                  <p className="font-dosis text-sm">
-                                    {Math.floor(day.timeTracked / 60)}h{" "}
-                                    {day.timeTracked % 60}m tracked
-                                  </p>
-                                  <p className="font-dosis text-sm">
-                                    {day.tasksCompleted} tasks completed
-                                  </p>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Legend */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm font-dosis text-gray-600 dark:text-gray-400">
-                          <span>Less</span>
-                          <div className="flex gap-1">
-                            {[0, 1, 2, 3, 4].map((level) => (
-                              <div
-                                key={level}
-                                className={`w-3 h-3 rounded-sm ${getActivityColor(
-                                  level
-                                )}`}
-                              />
-                            ))}
+                        <div className="space-y-2">
+                          <Progress
+                            value={monthlyTaskProgress.percentage}
+                            className="h-2"
+                          />
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-dosis text-gray-600 dark:text-gray-400">
+                              {Math.round(monthlyTaskProgress.percentage)}%
+                              complete
+                            </span>
+                            {monthlyTaskProgress.percentage >= 100 && (
+                              <span className="font-dosis text-green-600 dark:text-green-400 flex items-center gap-1">
+                                <Trophy className="w-3 h-3" />
+                                Goal reached!
+                              </span>
+                            )}
                           </div>
-                          <span>More</span>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Bottom Row - Motivation & Stats */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Motivational Widget */}
-                <motion.div variants={cardVariants}>
-                  <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20 border-teal-200/50 dark:border-teal-800/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <motion.div
-                          animate={{ rotate: [0, 360] }}
-                          transition={{
-                            duration: 20,
-                            repeat: Infinity,
-                            ease: "linear",
-                          }}
-                        >
-                          <Sparkles className="w-6 h-6 text-teal-500" />
-                        </motion.div>
-                        <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                          Daily Motivation
-                        </span>
-                      </div>
-                      <AnimatePresence mode="wait">
-                        <motion.p
-                          key={currentQuote}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          transition={{ duration: 0.5 }}
-                          className="font-dosis text-lg text-center text-gray-700 dark:text-gray-300"
-                        >
-                          {motivationalQuotes[currentQuote]}
-                        </motion.p>
-                      </AnimatePresence>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </div>
 
-                {/* Quick Stats */}
-                <motion.div variants={cardVariants}>
+                {/* Activity Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Activity Heatmap */}
+                  <div className="lg:col-span-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="w-5 h-5 text-blue-500" />
+                          <span className="font-dosis">Activity Overview</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Heatmap Grid */}
+                          <div className="overflow-x-auto">
+                            <div className="grid grid-cols-53 gap-1 min-w-[800px]">
+                              {heatmapData.map((day, index) => (
+                                <Tooltip key={index}>
+                                  <TooltipTrigger asChild>
+                                    <motion.div
+                                      className={`w-3 h-3 rounded-sm cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-orange-300 dark:hover:ring-orange-600 ${getActivityColor(
+                                        day.value
+                                      )}`}
+                                      whileHover={{ scale: 1.2 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 400,
+                                      }}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-center space-y-1">
+                                      <p className="font-dosis font-semibold">
+                                        {format(day.date, "MMM dd, yyyy")}
+                                      </p>
+                                      <p className="font-dosis text-sm">
+                                        {Math.floor(day.timeTracked / 60)}h{" "}
+                                        {day.timeTracked % 60}m tracked
+                                      </p>
+                                      <p className="font-dosis text-sm">
+                                        {day.tasksCompleted} tasks completed
+                                      </p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Legend */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm font-dosis text-gray-600 dark:text-gray-400">
+                              <span>Less</span>
+                              <div className="flex gap-1">
+                                {[0, 1, 2, 3, 4].map((level) => (
+                                  <div
+                                    key={level}
+                                    className={`w-3 h-3 rounded-sm ${getActivityColor(
+                                      level
+                                    )}`}
+                                  />
+                                ))}
+                              </div>
+                              <span>More</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Quick Stats */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-green-500" />
-                        <span className="font-dosis">Quick Stats</span>
+                        <span className="font-dosis">Statistics</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between py-2">
                           <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
                             Most productive day
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                          <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
                             {(() => {
                               const maxDay = heatmapData.reduce(
                                 (max, day) =>
@@ -787,11 +675,12 @@ export default function GoalsPage() {
                             })()}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <Separator />
+                        <div className="flex items-center justify-between py-2">
                           <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
                             Average daily focus
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                          <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
                             {(() => {
                               const totalMinutes = heatmapData.reduce(
                                 (sum, day) => sum + day.timeTracked,
@@ -808,29 +697,31 @@ export default function GoalsPage() {
                             })()}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <Separator />
+                        <div className="flex items-center justify-between py-2">
                           <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
-                            Tasks completed this month
+                            Tasks this month
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                          <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
                             {monthlyTaskProgress.current}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <Separator />
+                        <div className="flex items-center justify-between py-2">
                           <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
                             Active days this year
                           </span>
-                          <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
+                          <span className="font-dosis font-medium text-gray-900 dark:text-gray-100">
                             {heatmapData.filter((day) => day.value > 0).length}
                           </span>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </div>
               </div>
-            </motion.main>
-          </TooltipProvider>
+            </TooltipProvider>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </div>
