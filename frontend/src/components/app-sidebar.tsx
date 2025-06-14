@@ -26,6 +26,7 @@ import {
 import { Dosis } from "next/font/google";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -195,6 +196,13 @@ export function AppSidebar() {
               >
                 <Heart className="w-3 h-3 text-red-500 fill-current" />
               </motion.div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-dosis text-sm text-gray-600 dark:text-gray-400">
+                Theme
+              </span>
+              <ThemeToggle />
             </div>
           </motion.div>
         </SidebarFooter>

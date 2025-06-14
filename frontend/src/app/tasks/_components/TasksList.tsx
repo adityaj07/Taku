@@ -1,7 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { TaskCard } from "@/components/TaskCard";
 import { Task } from "@/lib/db";
-import { FileText, Plus } from "lucide-react";
 import EmptyTasksState from "./emptyStates/EmptyTasksState";
 import { TasksListSection } from "./TasksListSelection";
 

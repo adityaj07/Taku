@@ -285,6 +285,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             set({ currentWorkspace: updatedWorkspace });
           } catch (error) {
             console.error("Failed to update theme:", error);
+            throw error;
           }
         },
 

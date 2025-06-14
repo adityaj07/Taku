@@ -61,6 +61,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -88,9 +89,10 @@ export default function SettingsPage() {
     isLoading,
     isHydrated,
     updateWorkspaceSettings,
-    setTheme,
     createWorkspace,
+    setTheme: setWorkspaceTheme,
   } = useWorkspaceStore();
+  const { theme, setTheme } = useTheme();
 
   // State for form management
   const [editingProfile, setEditingProfile] = useState(false);
@@ -168,8 +170,12 @@ export default function SettingsPage() {
     await updateWorkspaceSettings({ [setting]: value });
   };
 
-  const handleThemeChange = async (theme: "system" | "light" | "dark") => {
-    await setTheme(theme);
+  const handleThemeChange = async (newTheme: "system" | "light" | "dark") => {
+    setTheme(newTheme); // next-themes
+    // Also update workspace store
+    if (currentWorkspace) {
+      await setWorkspaceTheme(newTheme); // workspace store
+    }
   };
 
   const handleExportWorkspace = () => {
@@ -439,7 +445,7 @@ export default function SettingsPage() {
                             Theme
                           </Label>
                           <Select
-                            value={currentWorkspace.theme}
+                            value={theme}
                             onValueChange={handleThemeChange}
                           >
                             <SelectTrigger className="font-dosis w-48">

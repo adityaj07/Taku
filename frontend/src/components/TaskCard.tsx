@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Play, Square } from "lucide-react";
 import { forwardRef } from "react";
+import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import TaskActions from "./TaskActions";
 
 interface TaskCardProps {
@@ -23,7 +24,7 @@ interface TaskCardProps {
   onDuplicate: (task: Task) => void;
   onTimerToggle: (task: Task) => void;
   isDragging?: boolean;
-  dragHandleProps?: any;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -240,3 +241,5 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
     );
   }
 );
+
+TaskCard.displayName = "TaskCard";

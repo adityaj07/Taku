@@ -54,19 +54,9 @@ export default function TasksPage() {
     updateWorkspaceSettings,
   } = useWorkspaceStore();
 
-  const {
-    addTask,
-    editTask,
-    deleteTask,
-    duplicateTask,
-    completeTask,
-    toggleTimer,
-    isAdding,
-    isDeleting,
-    isEditing,
-    isLoading: isTaskActionLoading,
-  } = useTaskActions();
-  const { activeTimers, formatActiveTime } = useTaskTimer();
+  const { addTask, editTask, deleteTask, isAdding, isDeleting, isEditing } =
+    useTaskActions();
+  const { activeTimers } = useTaskTimer();
   const { onDragEnd } = useTaskDragDrop();
 
   // State management
@@ -118,8 +108,9 @@ export default function TasksPage() {
         dueDate: "",
       });
       setIsAddTaskModalOpen(false);
-    } catch (error) {
+    } catch (_error) {
       // Error is already handled by the hook, just log or handle UI state if needed
+      void _error;
       console.log("Add task failed, keeping modal open");
     }
   };
@@ -138,7 +129,8 @@ export default function TasksPage() {
       // Reset state only on success
       setTaskToEdit(null);
       setIsEditTaskModalOpen(false);
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Edit task failed, keeping modal open");
     }
   };
@@ -151,7 +143,8 @@ export default function TasksPage() {
       await updateWorkspaceSettings({ columns: newColumns });
       setNewColumnName("");
       setIsAddColumnModalOpen(false);
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Adding a Column failed, keeping modal open");
     }
   };
@@ -176,7 +169,8 @@ export default function TasksPage() {
       await updateWorkspaceSettings({ columns: newColumns });
 
       setColumnToDelete(null);
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Deleting column failed, keeping modal open");
     }
   };
@@ -184,7 +178,8 @@ export default function TasksPage() {
   const handleTaskComplete = async (taskId: string) => {
     try {
       await moveTask(taskId, "Done");
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Moving task failed, keeping modal open");
     }
   };
@@ -198,7 +193,8 @@ export default function TasksPage() {
         priority: task.priority,
         dueDate: task.dueDate,
       });
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Adding duplicate task failed, keeping modal open");
     }
   };
@@ -209,7 +205,8 @@ export default function TasksPage() {
     try {
       await deleteTask(taskToDelete.id);
       setTaskToDelete(null);
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Delete task failed");
     }
   };
@@ -221,7 +218,8 @@ export default function TasksPage() {
       } else {
         await startTimer(task.id);
       }
-    } catch (error) {
+    } catch (_error) {
+      void _error;
       console.log("Timer toggling failed, keeping modal open");
     }
   };
