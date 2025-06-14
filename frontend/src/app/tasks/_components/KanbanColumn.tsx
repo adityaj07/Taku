@@ -9,7 +9,7 @@ import { Task } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { MoreVertical, Plus, Trash2 } from "lucide-react";
 import { Draggable, Droppable } from "react-beautiful-dnd";
-import EmptyColumnState from "./EmptyColumnState";
+import EmptyColumnState from "./emptyStates/EmptyColumnState";
 
 interface KanbanColumnProps {
   column: string;

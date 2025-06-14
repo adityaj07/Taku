@@ -2,7 +2,6 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import Loading from "@/components/Loading";
-import { TaskCard } from "@/components/TaskCard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,13 +10,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -25,27 +17,21 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useTaskActions } from "@/hooks/tasks/useTaskActions";
+import { useTaskDragDrop } from "@/hooks/tasks/useTaskDragDrop";
 import { useTaskTimer } from "@/hooks/tasks/useTaskTimer";
 import { Task } from "@/lib/db";
-import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store";
-import { FileText, MoreVertical, Plus, Square, Trash2 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  DragDropContext,
-  Draggable,
-  Droppable,
-  DropResult,
-} from "react-beautiful-dnd";
+import { KanbanBoard } from "./_components/KanbanBoard";
 import { AddColumnModal } from "./_components/modals/AddColumnModal";
 import { AddTaskModal } from "./_components/modals/AddTaskModal";
 import { DeleteColumnDialog } from "./_components/modals/DeleteColumnDialog";
 import { DeleteTaskDialog } from "./_components/modals/DeleteTaskDialog";
 import { EditTaskModal } from "./_components/modals/EditTaskModal";
 import StatsBar from "./_components/StatsBar";
-import { KanbanBoard } from "./_components/KanbanBoard";
+import { TasksList } from "./_components/TasksList";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -81,6 +67,7 @@ export default function TasksPage() {
     isLoading: isTaskActionLoading,
   } = useTaskActions();
   const { activeTimers, formatActiveTime } = useTaskTimer();
+  const { onDragEnd } = useTaskDragDrop();
 
   // State management
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -239,25 +226,6 @@ export default function TasksPage() {
     }
   };
 
-  const onDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) return;
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    try {
-      await moveTask(draggableId, destination.droppableId);
-    } catch (error) {
-      console.error("Failed to move task:", error);
-    }
-  };
-
   // Group tasks by column
   const tasksByColumn = currentWorkspace.columns.reduce((acc, column) => {
     acc[column] = currentWorkspace.tasks.filter(
@@ -363,84 +331,26 @@ export default function TasksPage() {
                   />
                 ) : (
                   // List View
-                  <div className="h-full overflow-y-auto">
-                    {currentWorkspace.tasks.length === 0 ? (
-                      <div className="text-center py-20">
-                        <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                        <h3 className="font-dosis text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                          No tasks yet
-                        </h3>
-                        <p className="font-dosis text-gray-600 dark:text-gray-400 mb-6">
-                          Create your first task to get started
-                        </p>
-                        <Button
-                          onClick={() => setIsAddTaskModalOpen(true)}
-                          className="font-dosis bg-orange-500 hover:bg-orange-600"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create First Task
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="p-6">
-                        <div className="max-w-7xl mx-auto space-y-8">
-                          {currentWorkspace.columns.map((column) => {
-                            const tasks = tasksByColumn[column] || [];
-                            if (tasks.length === 0) return null;
-
-                            return (
-                              <div key={column} className="space-y-4">
-                                {/* Column Header */}
-                                <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-                                  <h2 className="font-dosis text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                    {column}
-                                  </h2>
-                                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full text-sm font-medium">
-                                    {tasks.length}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setNewTaskForm((prev) => ({
-                                        ...prev,
-                                        column,
-                                      }));
-                                      setIsAddTaskModalOpen(true);
-                                    }}
-                                    className="font-dosis text-xs h-8"
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Add Task
-                                  </Button>
-                                </div>
-
-                                {/* Tasks List */}
-                                <div className="space-y-2">
-                                  {tasks.map((task) => (
-                                    <TaskCard
-                                      key={task.id}
-                                      task={task}
-                                      activeTimer={activeTimers[task.id]}
-                                      variant="list"
-                                      onEdit={(task) => {
-                                        setTaskToEdit(task);
-                                        setIsEditTaskModalOpen(true);
-                                      }}
-                                      onDelete={setTaskToDelete}
-                                      onComplete={handleTaskComplete}
-                                      onDuplicate={handleTaskDuplicate}
-                                      onTimerToggle={handleTimerToggle}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <TasksList
+                    columns={currentWorkspace.columns}
+                    tasksByColumn={tasksByColumn}
+                    activeTimers={activeTimers}
+                    totalTasks={totalTasks}
+                    onAddTask={(column) => {
+                      if (column) {
+                        setNewTaskForm((prev) => ({ ...prev, column }));
+                      }
+                      setIsAddTaskModalOpen(true);
+                    }}
+                    onEditTask={(task) => {
+                      setTaskToEdit(task);
+                      setIsEditTaskModalOpen(true);
+                    }}
+                    onDeleteTask={setTaskToDelete}
+                    onCompleteTask={handleTaskComplete}
+                    onDuplicateTask={handleTaskDuplicate}
+                    onTimerToggle={handleTimerToggle}
+                  />
                 )}
               </div>
             </div>
