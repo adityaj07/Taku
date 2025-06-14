@@ -39,12 +39,13 @@ import {
   Droppable,
   DropResult,
 } from "react-beautiful-dnd";
-import { AddColumnModal } from "./_components/AddColumnModal";
-import { AddTaskModal } from "./_components/AddTaskModal";
-import { DeleteColumnDialog } from "./_components/DeleteColumnDialog";
-import { DeleteTaskDialog } from "./_components/DeleteTaskDialog";
-import { EditTaskModal } from "./_components/EditTaskModal";
+import { AddColumnModal } from "./_components/modals/AddColumnModal";
+import { AddTaskModal } from "./_components/modals/AddTaskModal";
+import { DeleteColumnDialog } from "./_components/modals/DeleteColumnDialog";
+import { DeleteTaskDialog } from "./_components/modals/DeleteTaskDialog";
+import { EditTaskModal } from "./_components/modals/EditTaskModal";
 import StatsBar from "./_components/StatsBar";
+import { KanbanBoard } from "./_components/KanbanBoard";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -340,217 +341,26 @@ export default function TasksPage() {
               <div className="flex-1 overflow-hidden">
                 {viewMode === "kanban" ? (
                   // Kanban View
-                  <div className="h-full p-6 overflow-hidden flex flex-col">
-                    <DragDropContext onDragEnd={onDragEnd}>
-                      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-                        <div className="flex gap-6 h-full min-w-max pb-4">
-                          {currentWorkspace.columns.map((column) => {
-                            const tasks = tasksByColumn[column] || [];
-                            return (
-                              <div
-                                key={column}
-                                className="flex-shrink-0 w-80 flex flex-col h-full"
-                              >
-                                {/* Column Header */}
-                                <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                                      {column}
-                                    </h3>
-                                    <span className="text-sm text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-                                      {tasks.length}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => {
-                                        setNewTaskForm((prev) => ({
-                                          ...prev,
-                                          column,
-                                        }));
-                                        setIsAddTaskModalOpen(true);
-                                      }}
-                                      className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-md transition-colors"
-                                      title={`Add task to ${column}`}
-                                    >
-                                      <Plus className="w-4 h-4" />
-                                    </button>
-
-                                    {/* Column Options */}
-                                    {column !== "Todo" &&
-                                      column !== "In Progress" &&
-                                      column !== "Done" && (
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <button className="p-1.5 text-gray-500 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
-                                              <MoreVertical className="w-4 h-4" />
-                                            </button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                              onClick={() =>
-                                                setColumnToDelete(column)
-                                              }
-                                              className="text-red-600 focus:text-red-600"
-                                            >
-                                              <Trash2 className="w-4 h-4 mr-2" />
-                                              Delete Column
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      )}
-                                  </div>
-                                </div>
-
-                                {/* Droppable Column */}
-                                <div className="flex-1 min-h-0 mt-2">
-                                  <Droppable droppableId={column}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.droppableProps}
-                                        className={cn(
-                                          "h-full p-3 rounded-xl border-2 border-dashed transition-all duration-200 overflow-y-auto",
-                                          snapshot.isDraggingOver
-                                            ? "border-orange-400 bg-orange-50 dark:border-orange-500 dark:bg-orange-950/20 shadow-lg"
-                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-gray-50/30 dark:bg-gray-800/30"
-                                        )}
-                                      >
-                                        {tasks.length === 0 ? (
-                                          <div
-                                            className={cn(
-                                              "flex flex-col items-center justify-center h-64 text-center transition-all duration-200",
-                                              snapshot.isDraggingOver
-                                                ? "text-orange-600"
-                                                : "text-gray-500"
-                                            )}
-                                          >
-                                            <div
-                                              className={cn(
-                                                "w-16 h-16 rounded-full flex items-center justify-center mb-3 transition-all duration-200",
-                                                snapshot.isDraggingOver
-                                                  ? "bg-orange-100 dark:bg-orange-950/30"
-                                                  : "bg-gray-100 dark:bg-gray-800"
-                                              )}
-                                            >
-                                              <Square
-                                                className={cn(
-                                                  "w-8 h-8 transition-all duration-200",
-                                                  snapshot.isDraggingOver
-                                                    ? "text-orange-600"
-                                                    : "text-gray-400"
-                                                )}
-                                              />
-                                            </div>
-                                            <p className="font-dosis dark:text-gray-400 mb-2">
-                                              {snapshot.isDraggingOver
-                                                ? `Drop task in ${column.toLowerCase()}`
-                                                : `No tasks in ${column.toLowerCase()}`}
-                                            </p>
-                                            {!snapshot.isDraggingOver && (
-                                              <button
-                                                onClick={() => {
-                                                  setNewTaskForm((prev) => ({
-                                                    ...prev,
-                                                    column,
-                                                  }));
-                                                  setIsAddTaskModalOpen(true);
-                                                }}
-                                                className="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
-                                              >
-                                                Add your first task
-                                              </button>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <div className="space-y-3">
-                                            {tasks.map((task, index) => (
-                                              <Draggable
-                                                key={task.id}
-                                                draggableId={task.id}
-                                                index={index}
-                                              >
-                                                {(provided, snapshot) => (
-                                                  <TaskCard
-                                                    ref={provided.innerRef}
-                                                    task={task}
-                                                    activeTimer={
-                                                      activeTimers[task.id]
-                                                    }
-                                                    variant="kanban"
-                                                    onEdit={(task) => {
-                                                      setTaskToEdit(task);
-                                                      setIsEditTaskModalOpen(
-                                                        true
-                                                      );
-                                                    }}
-                                                    onDelete={setTaskToDelete}
-                                                    onComplete={
-                                                      handleTaskComplete
-                                                    }
-                                                    onDuplicate={
-                                                      handleTaskDuplicate
-                                                    }
-                                                    onTimerToggle={
-                                                      handleTimerToggle
-                                                    }
-                                                    isDragging={
-                                                      snapshot.isDragging
-                                                    }
-                                                    dragHandleProps={
-                                                      provided.dragHandleProps
-                                                    }
-                                                    style={{
-                                                      userSelect: "none",
-                                                      ...provided.draggableProps
-                                                        .style,
-                                                    }}
-                                                    {...provided.draggableProps}
-                                                  />
-                                                )}
-                                              </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </Droppable>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          <div
-                            onClick={() => setIsAddColumnModalOpen(true)}
-                            className="flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center min-h-[400px] hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 cursor-pointer transition-all duration-200 group"
-                          >
-                            <div className="text-center w-full">
-                              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-100 dark:group-hover:bg-orange-950/30 transition-colors duration-200 mx-auto">
-                                <Plus className="w-6 h-6 text-gray-500 group-hover:text-orange-600 transition-colors duration-200" />
-                              </div>
-
-                              <h3 className="font-dosis text-lg font-medium text-gray-700 dark:text-gray-300 group-hover:text-orange-600 transition-colors duration-200 mb-2">
-                                Add Column
-                              </h3>
-                              <p className="font-dosis text-sm text-gray-500 dark:text-gray-400">
-                                Create a new column to organize your tasks
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Add Column */}
-                          <AddColumnModal
-                            isOpen={isAddColumnModalOpen}
-                            onClose={() => setIsAddColumnModalOpen(false)}
-                            onSubmit={handleAddColumn}
-                            columnName={newColumnName}
-                            onColumnNameChange={setNewColumnName}
-                          />
-                        </div>
-                      </div>
-                    </DragDropContext>
-                  </div>
+                  <KanbanBoard
+                    columns={currentWorkspace.columns}
+                    tasksByColumn={tasksByColumn}
+                    activeTimers={activeTimers}
+                    onDragEnd={onDragEnd}
+                    onAddTask={(column) => {
+                      setNewTaskForm((prev) => ({ ...prev, column }));
+                      setIsAddTaskModalOpen(true);
+                    }}
+                    onAddColumn={() => setIsAddColumnModalOpen(true)}
+                    onDeleteColumn={setColumnToDelete}
+                    onEditTask={(task) => {
+                      setTaskToEdit(task);
+                      setIsEditTaskModalOpen(true);
+                    }}
+                    onDeleteTask={setTaskToDelete}
+                    onCompleteTask={handleTaskComplete}
+                    onDuplicateTask={handleTaskDuplicate}
+                    onTimerToggle={handleTimerToggle}
+                  />
                 ) : (
                   // List View
                   <div className="h-full overflow-y-auto">
@@ -637,6 +447,15 @@ export default function TasksPage() {
           </SidebarInset>
         </SidebarProvider>
       </div>
+
+      {/* Add Column */}
+      <AddColumnModal
+        isOpen={isAddColumnModalOpen}
+        onClose={() => setIsAddColumnModalOpen(false)}
+        onSubmit={handleAddColumn}
+        columnName={newColumnName}
+        onColumnNameChange={setNewColumnName}
+      />
 
       {/* Edit Task Dialog */}
       <EditTaskModal

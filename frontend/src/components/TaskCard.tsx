@@ -1,13 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Task } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import {
@@ -17,17 +9,7 @@ import {
   getPriorityIcon,
 } from "@/utils";
 import { format } from "date-fns";
-import {
-  CalendarIcon,
-  Check,
-  Clock,
-  Copy,
-  Edit3,
-  MoreHorizontal,
-  Play,
-  Square,
-  Trash2,
-} from "lucide-react";
+import { CalendarIcon, Clock, Play, Square } from "lucide-react";
 import { forwardRef } from "react";
 import TaskActions from "./TaskActions";
 
@@ -158,7 +140,7 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
         ref={ref}
         style={style}
         className={cn(
-          "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm group transition-all duration-200 cursor-grab active:cursor-grabbing",
+          "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm group transition-all duration-200", // REMOVED cursor-grab from here
           isDragging
             ? "shadow-2xl rotate-1 scale-105 ring-2 ring-orange-200 dark:ring-orange-800 z-50"
             : "hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600",
@@ -168,12 +150,15 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
         )}
       >
         <div className="p-4 space-y-3">
-          {/* Title and Actions Row */}
+          {/* Title and Actions Row - THIS is the draggable area */}
           <div
-            className="flex items-start justify-between gap-2"
+            className={cn(
+              "flex items-start justify-between gap-2 cursor-grab active:cursor-grabbing", // ADD cursor here
+              isDragging && "cursor-grabbing"
+            )}
             {...dragHandleProps}
           >
-            <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed flex-1">
+            <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed flex-1 select-none">
               {task.title}
             </h4>
 
@@ -189,19 +174,19 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
             />
           </div>
 
-          {/* Description */}
+          {/* Description - NOT draggable, normal cursor */}
           {task.description && (
             <p className="font-dosis text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
               {task.description}
             </p>
           )}
 
-          {/* Priority and Due Date */}
+          {/* Priority and Due Date - NOT draggable, normal cursor */}
           <div className="flex items-center justify-between gap-2">
             {/* Priority */}
             <div
               className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-gray-50 dark:bg-gray-700/50",
+                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-gray-50 dark:bg-gray-700/50 cursor-default", // ADD cursor-default
                 getPriorityColor(task.priority)
               )}
             >
@@ -211,16 +196,16 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
 
             {/* Due Date */}
             {task.dueDate && (
-              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md">
+              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md cursor-default">
                 <CalendarIcon className="w-3 h-3" />
                 {format(new Date(task.dueDate), "MMM dd")}
               </div>
             )}
           </div>
 
-          {/* Timer Section */}
+          {/* Timer Section - NOT draggable, normal cursor */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-default">
               <span className="text-xs text-gray-500 font-mono">
                 {formatTime(task.timeSpent)}
               </span>
@@ -237,7 +222,7 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(
                 onTimerToggle(task);
               }}
               className={cn(
-                "p-1.5 rounded-md transition-colors",
+                "p-1.5 rounded-md transition-colors cursor-pointer", // Explicit cursor-pointer
                 task.isActive
                   ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                   : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
