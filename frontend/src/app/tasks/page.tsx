@@ -1,16 +1,8 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import Loading from "@/components/Loading";
+import { TaskCard } from "@/components/TaskCard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,66 +12,24 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Textarea } from "@/components/ui/textarea";
+import { useTaskActions } from "@/hooks/tasks/useTaskActions";
+import { useTaskTimer } from "@/hooks/tasks/useTaskTimer";
 import { Task } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store";
-import { format } from "date-fns";
-import {
-  AlertCircle,
-  CalendarIcon,
-  Check,
-  CheckCircle2,
-  Circle,
-  Clock,
-  Copy,
-  Edit3,
-  FileText,
-  Kanban,
-  List,
-  MoreHorizontal,
-  MoreVertical,
-  Play,
-  Plus,
-  Square,
-  Target,
-  Trash2,
-} from "lucide-react";
+import { FileText, MoreVertical, Plus, Square, Trash2 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -89,6 +39,12 @@ import {
   Droppable,
   DropResult,
 } from "react-beautiful-dnd";
+import { AddColumnModal } from "./_components/AddColumnModal";
+import { AddTaskModal } from "./_components/AddTaskModal";
+import { DeleteColumnDialog } from "./_components/DeleteColumnDialog";
+import { DeleteTaskDialog } from "./_components/DeleteTaskDialog";
+import { EditTaskModal } from "./_components/EditTaskModal";
+import StatsBar from "./_components/StatsBar";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -102,14 +58,28 @@ export default function TasksPage() {
     currentWorkspace,
     isLoading,
     isHydrated,
-    addTask,
+
     updateTask,
-    deleteTask,
+
     moveTask,
     startTimer,
     stopTimer,
     updateWorkspaceSettings,
   } = useWorkspaceStore();
+
+  const {
+    addTask,
+    editTask,
+    deleteTask,
+    duplicateTask,
+    completeTask,
+    toggleTimer,
+    isAdding,
+    isDeleting,
+    isEditing,
+    isLoading: isTaskActionLoading,
+  } = useTaskActions();
+  const { activeTimers, formatActiveTime } = useTaskTimer();
 
   // State management
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -117,7 +87,6 @@ export default function TasksPage() {
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
-  const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
@@ -135,178 +104,137 @@ export default function TasksPage() {
     }
   }, [currentWorkspace, isLoading, isHydrated, router]);
 
-  // Timer update effect
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (currentWorkspace?.tasks) {
-        const newActiveTimers: Record<string, number> = {};
-        currentWorkspace.tasks.forEach((task) => {
-          if (task.isActive && task.startTime) {
-            const elapsed = Math.floor(
-              (Date.now() - new Date(task.startTime).getTime()) / 1000
-            );
-            newActiveTimers[task.id] = elapsed;
-          }
-        });
-        setActiveTimers(newActiveTimers);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentWorkspace?.tasks]);
-
   if (!isHydrated || isLoading || !currentWorkspace) {
-    return (
-      <div
-        className={`${dosis.variable} min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900`}
-      >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="font-dosis text-gray-600 dark:text-gray-300">
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
-  // Helper functions
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return <AlertCircle className="w-3 h-3" />;
-      case "medium":
-        return <Circle className="w-3 h-3" />;
-      case "low":
-        return <CheckCircle2 className="w-3 h-3" />;
-      default:
-        return <Circle className="w-3 h-3" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "text-red-600 dark:text-red-400";
-      case "medium":
-        return "text-amber-600 dark:text-amber-400";
-      case "low":
-        return "text-emerald-600 dark:text-emerald-400";
-      default:
-        return "text-gray-600 dark:text-gray-400";
-    }
-  };
-
-  const formatActiveTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
-
-  // Event handlers
+  // // Event handlers
   const handleAddTask = async () => {
     if (!newTaskForm.title.trim()) return;
 
-    await addTask({
-      title: newTaskForm.title,
-      description: newTaskForm.description,
-      column: newTaskForm.column,
-      priority: newTaskForm.priority,
-      dueDate: newTaskForm.dueDate || undefined,
-    });
+    try {
+      await addTask({
+        title: newTaskForm.title,
+        description: newTaskForm.description,
+        column: newTaskForm.column,
+        priority: newTaskForm.priority,
+        dueDate: newTaskForm.dueDate || undefined,
+      });
 
-    setNewTaskForm({
-      title: "",
-      description: "",
-      column: "Todo",
-      priority: "medium",
-      dueDate: "",
-    });
-    setIsAddTaskModalOpen(false);
+      // Reset form and close modal only on success
+      setNewTaskForm({
+        title: "",
+        description: "",
+        column: "Todo",
+        priority: "medium",
+        dueDate: "",
+      });
+      setIsAddTaskModalOpen(false);
+    } catch (error) {
+      // Error is already handled by the hook, just log or handle UI state if needed
+      console.log("Add task failed, keeping modal open");
+    }
   };
 
   const handleEditTask = async () => {
     if (!taskToEdit || !taskToEdit.title.trim()) return;
 
-    await updateTask(taskToEdit.id, {
-      title: taskToEdit.title,
-      description: taskToEdit.description,
-      priority: taskToEdit.priority,
-      dueDate: taskToEdit.dueDate,
-    });
+    try {
+      await editTask(taskToEdit.id, {
+        title: taskToEdit.title,
+        description: taskToEdit.description,
+        priority: taskToEdit.priority,
+        dueDate: taskToEdit.dueDate,
+      });
 
-    setTaskToEdit(null);
-    setIsEditTaskModalOpen(false);
+      // Reset state only on success
+      setTaskToEdit(null);
+      setIsEditTaskModalOpen(false);
+    } catch (error) {
+      console.log("Edit task failed, keeping modal open");
+    }
   };
 
   const handleAddColumn = async () => {
     if (!newColumnName.trim()) return;
 
-    const newColumns = [...currentWorkspace.columns, newColumnName];
-    await updateWorkspaceSettings({ columns: newColumns });
-    setNewColumnName("");
-    setIsAddColumnModalOpen(false);
+    try {
+      const newColumns = [...currentWorkspace.columns, newColumnName];
+      await updateWorkspaceSettings({ columns: newColumns });
+      setNewColumnName("");
+      setIsAddColumnModalOpen(false);
+    } catch (error) {
+      console.log("Adding a Column failed, keeping modal open");
+    }
   };
 
   const handleDeleteColumn = async () => {
     if (!columnToDelete) return;
 
-    // Move all tasks from this column to "Todo" column
-    const tasksInColumn = currentWorkspace.tasks.filter(
-      (task) => task.column === columnToDelete
-    );
+    try {
+      // Move all tasks from this column to "Todo" column
+      const tasksInColumn = currentWorkspace.tasks.filter(
+        (task) => task.column === columnToDelete
+      );
 
-    for (const task of tasksInColumn) {
-      await updateTask(task.id, { column: "Todo" });
+      for (const task of tasksInColumn) {
+        await updateTask(task.id, { column: "Todo" });
+      }
+
+      // Remove column from workspace
+      const newColumns = currentWorkspace.columns.filter(
+        (col) => col !== columnToDelete
+      );
+      await updateWorkspaceSettings({ columns: newColumns });
+
+      setColumnToDelete(null);
+    } catch (error) {
+      console.log("Deleting column failed, keeping modal open");
     }
-
-    // Remove column from workspace
-    const newColumns = currentWorkspace.columns.filter(
-      (col) => col !== columnToDelete
-    );
-    await updateWorkspaceSettings({ columns: newColumns });
-
-    setColumnToDelete(null);
   };
 
   const handleTaskComplete = async (taskId: string) => {
-    await moveTask(taskId, "Done");
+    try {
+      await moveTask(taskId, "Done");
+    } catch (error) {
+      console.log("Moving task failed, keeping modal open");
+    }
   };
 
   const handleTaskDuplicate = async (task: Task) => {
-    await addTask({
-      title: `${task.title} (Copy)`,
-      description: task.description,
-      column: task.column,
-      priority: task.priority,
-      dueDate: task.dueDate,
-    });
+    try {
+      await addTask({
+        title: `${task.title} (Copy)`,
+        description: task.description,
+        column: task.column,
+        priority: task.priority,
+        dueDate: task.dueDate,
+      });
+    } catch (error) {
+      console.log("Adding duplicate task failed, keeping modal open");
+    }
   };
 
   const handleTaskDelete = async () => {
-    if (taskToDelete) {
+    if (!taskToDelete) return;
+
+    try {
       await deleteTask(taskToDelete.id);
       setTaskToDelete(null);
+    } catch (error) {
+      console.log("Delete task failed");
     }
   };
 
   const handleTimerToggle = async (task: Task) => {
-    if (task.isActive) {
-      await stopTimer(task.id);
-    } else {
-      await startTimer(task.id);
+    try {
+      if (task.isActive) {
+        await stopTimer(task.id);
+      } else {
+        await startTimer(task.id);
+      }
+    } catch (error) {
+      console.log("Timer toggling failed, keeping modal open");
     }
   };
 
@@ -384,286 +312,29 @@ export default function TasksPage() {
               {/* Header Actions */}
               <div className="ml-auto flex items-center gap-2">
                 {/* Add Task Button */}
-                <Dialog
-                  open={isAddTaskModalOpen}
-                  onOpenChange={setIsAddTaskModalOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="font-dosis bg-orange-500 hover:bg-orange-600"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Task
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle className="font-dosis">
-                        Create New Task
-                      </DialogTitle>
-                      <DialogDescription className="font-dosis">
-                        Add a new task to your workspace
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="font-dosis text-sm font-medium mb-2 block">
-                          Task Title
-                        </label>
-                        <Input
-                          placeholder="Enter task title..."
-                          value={newTaskForm.title}
-                          onChange={(e) =>
-                            setNewTaskForm((prev) => ({
-                              ...prev,
-                              title: e.target.value,
-                            }))
-                          }
-                          className="font-dosis"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="font-dosis text-sm font-medium mb-2 block">
-                          Description (Optional)
-                        </label>
-                        <Textarea
-                          placeholder="Add task description..."
-                          value={newTaskForm.description}
-                          onChange={(e) =>
-                            setNewTaskForm((prev) => ({
-                              ...prev,
-                              description: e.target.value,
-                            }))
-                          }
-                          className="font-dosis resize-none"
-                          rows={3}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="font-dosis text-sm font-medium mb-2 block">
-                            Column
-                          </label>
-                          <Select
-                            value={newTaskForm.column}
-                            onValueChange={(value) =>
-                              setNewTaskForm((prev) => ({
-                                ...prev,
-                                column: value,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="font-dosis">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {currentWorkspace.columns.map((column) => (
-                                <SelectItem key={column} value={column}>
-                                  {column}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <label className="font-dosis text-sm font-medium mb-2 block">
-                            Priority
-                          </label>
-                          <Select
-                            value={newTaskForm.priority}
-                            onValueChange={(value: "low" | "medium" | "high") =>
-                              setNewTaskForm((prev) => ({
-                                ...prev,
-                                priority: value,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="font-dosis">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                  <span>Low</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="medium">
-                                <div className="flex items-center gap-2">
-                                  <Circle className="w-3 h-3 text-amber-600" />
-                                  <span>Medium</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="high">
-                                <div className="flex items-center gap-2">
-                                  <AlertCircle className="w-3 h-3 text-red-600" />
-                                  <span>High</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="font-dosis text-sm font-medium mb-2 block">
-                          Due Date (Optional)
-                        </label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-dosis",
-                                !newTaskForm.dueDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {newTaskForm.dueDate
-                                ? format(new Date(newTaskForm.dueDate), "PPP")
-                                : "Pick a date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                newTaskForm.dueDate
-                                  ? new Date(newTaskForm.dueDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                setNewTaskForm((prev) => ({
-                                  ...prev,
-                                  dueDate: date ? date.toISOString() : "",
-                                }));
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="flex gap-3 pt-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsAddTaskModalOpen(false)}
-                          className="font-dosis flex-1"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleAddTask}
-                          disabled={!newTaskForm.title.trim()}
-                          className="font-dosis flex-1 bg-orange-500 hover:bg-orange-600"
-                        >
-                          Create Task
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <AddTaskModal
+                  isOpen={isAddTaskModalOpen}
+                  onClose={() => setIsAddTaskModalOpen(false)}
+                  onSubmit={handleAddTask}
+                  formData={newTaskForm}
+                  onFormChange={setNewTaskForm}
+                  columns={currentWorkspace.columns}
+                  isLoading={isAdding}
+                />
               </div>
             </header>
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
               {/* Compact Stats Bar */}
-              <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3">
-                <div className="max-w-7xl mx-auto">
-                  <div className="flex items-center justify-between gap-8">
-                    <div className="flex items-center gap-8">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-blue-500 rounded-md flex items-center justify-center">
-                          <Target className="w-3 h-3 text-white" />
-                        </div>
-                        <div>
-                          <span className="font-dosis text-xs text-blue-600 dark:text-blue-400">
-                            Total
-                          </span>
-                          <span className="font-dosis text-sm font-bold text-blue-900 dark:text-blue-100 ml-2">
-                            {totalTasks}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center">
-                          <Clock className="w-3 h-3 text-white" />
-                        </div>
-                        <div>
-                          <span className="font-dosis text-xs text-orange-600 dark:text-orange-400">
-                            In Progress
-                          </span>
-                          <span className="font-dosis text-sm font-bold text-orange-900 dark:text-orange-100 ml-2">
-                            {inProgressTasks}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center">
-                          <CheckCircle2 className="w-3 h-3 text-white" />
-                        </div>
-                        <div>
-                          <span className="font-dosis text-xs text-green-600 dark:text-green-400">
-                            Completed
-                          </span>
-                          <span className="font-dosis text-sm font-bold text-green-900 dark:text-green-100 ml-2">
-                            {completedTasks}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-purple-500 rounded-md flex items-center justify-center">
-                          <Clock className="w-3 h-3 text-white" />
-                        </div>
-                        <div>
-                          <span className="font-dosis text-xs text-purple-600 dark:text-purple-400">
-                            Time Spent
-                          </span>
-                          <span className="font-dosis text-sm font-bold text-purple-900 dark:text-purple-100 ml-2">
-                            {formatTime(totalTimeSpent)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* View Toggle */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                      <button
-                        onClick={() => setViewMode("kanban")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
-                          viewMode === "kanban"
-                            ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                        )}
-                      >
-                        <Kanban className="w-4 h-4" />
-                        <span className="font-dosis">Board</span>
-                      </button>
-                      <button
-                        onClick={() => setViewMode("list")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
-                          viewMode === "list"
-                            ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                        )}
-                      >
-                        <List className="w-4 h-4" />
-                        <span className="font-dosis">List</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <StatsBar
+                completedTasks={completedTasks}
+                inProgressTasks={inProgressTasks}
+                totalTasks={totalTasks}
+                totalTimeSpent={totalTimeSpent}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+              />
 
               {/* Content Area */}
               <div className="flex-1 overflow-hidden">
@@ -800,209 +471,42 @@ export default function TasksPage() {
                                                 index={index}
                                               >
                                                 {(provided, snapshot) => (
-                                                  <div
+                                                  <TaskCard
                                                     ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    className={cn(
-                                                      "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm group transition-all duration-200 cursor-grab active:cursor-grabbing",
+                                                    task={task}
+                                                    activeTimer={
+                                                      activeTimers[task.id]
+                                                    }
+                                                    variant="kanban"
+                                                    onEdit={(task) => {
+                                                      setTaskToEdit(task);
+                                                      setIsEditTaskModalOpen(
+                                                        true
+                                                      );
+                                                    }}
+                                                    onDelete={setTaskToDelete}
+                                                    onComplete={
+                                                      handleTaskComplete
+                                                    }
+                                                    onDuplicate={
+                                                      handleTaskDuplicate
+                                                    }
+                                                    onTimerToggle={
+                                                      handleTimerToggle
+                                                    }
+                                                    isDragging={
                                                       snapshot.isDragging
-                                                        ? "shadow-2xl rotate-1 scale-105 ring-2 ring-orange-200 dark:ring-orange-800 z-50"
-                                                        : "hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600",
-                                                      task.isActive &&
-                                                        "ring-2 ring-orange-200 dark:ring-orange-800 bg-orange-50/50 dark:bg-orange-950/20"
-                                                    )}
+                                                    }
+                                                    dragHandleProps={
+                                                      provided.dragHandleProps
+                                                    }
                                                     style={{
-                                                      userSelect: "none", // Prevent text selection
+                                                      userSelect: "none",
                                                       ...provided.draggableProps
                                                         .style,
                                                     }}
-                                                  >
-                                                    <div className="p-4 space-y-3">
-                                                      {/* Title and Actions Row */}
-                                                      <div
-                                                        className="flex items-start justify-between gap-2"
-                                                        {...provided.dragHandleProps}
-                                                      >
-                                                        <h4 className="font-dosis font-medium text-gray-900 dark:text-gray-100 text-sm leading-relaxed flex-1">
-                                                          {task.title}
-                                                        </h4>
-
-                                                        {/* Action Buttons */}
-                                                        <div
-                                                          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                          onClick={(e) =>
-                                                            e.stopPropagation()
-                                                          }
-                                                          onMouseDown={(e) =>
-                                                            e.stopPropagation()
-                                                          }
-                                                        >
-                                                          <button
-                                                            onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              setTaskToEdit(
-                                                                task
-                                                              );
-                                                              setIsEditTaskModalOpen(
-                                                                true
-                                                              );
-                                                            }}
-                                                            className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                                            title="Edit task"
-                                                          >
-                                                            <Edit3 className="w-4 h-4" />
-                                                          </button>
-                                                          <button
-                                                            onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              handleTaskComplete(
-                                                                task.id
-                                                              );
-                                                            }}
-                                                            className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                                                            title="Mark as complete"
-                                                          >
-                                                            <Check className="w-4 h-4" />
-                                                          </button>
-                                                          <DropdownMenu>
-                                                            <DropdownMenuTrigger
-                                                              asChild
-                                                            >
-                                                              <button
-                                                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                                                onClick={(e) =>
-                                                                  e.stopPropagation()
-                                                                }
-                                                              >
-                                                                <MoreHorizontal className="w-4 h-4" />
-                                                              </button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                              <DropdownMenuItem
-                                                                onClick={(
-                                                                  e
-                                                                ) => {
-                                                                  e.stopPropagation();
-                                                                  handleTaskDuplicate(
-                                                                    task
-                                                                  );
-                                                                }}
-                                                              >
-                                                                <Copy className="w-4 h-4 mr-2" />
-                                                                Duplicate
-                                                              </DropdownMenuItem>
-                                                              <DropdownMenuSeparator />
-                                                              <DropdownMenuItem
-                                                                onClick={(
-                                                                  e
-                                                                ) => {
-                                                                  e.stopPropagation();
-                                                                  setTaskToDelete(
-                                                                    task
-                                                                  );
-                                                                }}
-                                                                className="text-red-600"
-                                                              >
-                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                Delete
-                                                              </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                          </DropdownMenu>
-                                                        </div>
-                                                      </div>
-
-                                                      {/* Description */}
-                                                      {task.description && (
-                                                        <p className="font-dosis text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                                                          {task.description}
-                                                        </p>
-                                                      )}
-
-                                                      {/* Priority and Due Date */}
-                                                      <div
-                                                        className="flex items-center justify-between gap-2"
-                                                        onClick={(e) =>
-                                                          e.stopPropagation()
-                                                        }
-                                                      >
-                                                        {/* Priority */}
-                                                        <div
-                                                          className={cn(
-                                                            "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-gray-50 dark:bg-gray-700/50",
-                                                            getPriorityColor(
-                                                              task.priority
-                                                            )
-                                                          )}
-                                                        >
-                                                          {getPriorityIcon(
-                                                            task.priority
-                                                          )}
-                                                          <span className="capitalize font-medium">
-                                                            {task.priority}
-                                                          </span>
-                                                        </div>
-
-                                                        {/* Due Date */}
-                                                        {task.dueDate && (
-                                                          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md">
-                                                            <CalendarIcon className="w-3 h-3" />
-                                                            {format(
-                                                              new Date(
-                                                                task.dueDate
-                                                              ),
-                                                              "MMM dd"
-                                                            )}
-                                                          </div>
-                                                        )}
-                                                      </div>
-
-                                                      {/* Timer Section */}
-                                                      <div
-                                                        className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700"
-                                                        onClick={(e) =>
-                                                          e.stopPropagation()
-                                                        }
-                                                      >
-                                                        <div className="flex items-center gap-2">
-                                                          <span className="text-xs text-gray-500 font-mono">
-                                                            {formatTime(
-                                                              task.timeSpent
-                                                            )}
-                                                          </span>
-                                                          {task.isActive && (
-                                                            <span className="text-xs font-mono text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded animate-pulse">
-                                                              {formatActiveTime(
-                                                                activeTimers[
-                                                                  task.id
-                                                                ] || 0
-                                                              )}
-                                                            </span>
-                                                          )}
-                                                        </div>
-
-                                                        <button
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleTimerToggle(
-                                                              task
-                                                            );
-                                                          }}
-                                                          className={cn(
-                                                            "p-1.5 rounded-md transition-colors",
-                                                            task.isActive
-                                                              ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                              : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
-                                                          )}
-                                                        >
-                                                          {task.isActive ? (
-                                                            <Square className="w-4 h-4" />
-                                                          ) : (
-                                                            <Play className="w-4 h-4" />
-                                                          )}
-                                                        </button>
-                                                      </div>
-                                                    </div>
-                                                  </div>
+                                                    {...provided.draggableProps}
+                                                  />
                                                 )}
                                               </Draggable>
                                             ))}
@@ -1017,75 +521,32 @@ export default function TasksPage() {
                             );
                           })}
 
-                          {/* Add Column */}
-                          <div className="flex-shrink-0 w-80">
-                            <Dialog
-                              open={isAddColumnModalOpen}
-                              onOpenChange={setIsAddColumnModalOpen}
-                            >
-                              <DialogTrigger asChild>
-                                <div className="h-full min-h-[600px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center p-6">
-                                  <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                    <Plus className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                                  </div>
-                                  <h3 className="font-dosis font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Add Column
-                                  </h3>
-                                  <p className="font-dosis text-sm text-gray-500 dark:text-gray-400">
-                                    Create a new column to organize your tasks
-                                  </p>
-                                </div>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle className="font-dosis">
-                                    Add New Column
-                                  </DialogTitle>
-                                  <DialogDescription className="font-dosis">
-                                    Create a new column for organizing your
-                                    tasks
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <label className="font-dosis text-sm font-medium mb-2 block">
-                                      Column Name
-                                    </label>
-                                    <Input
-                                      placeholder="e.g., Review, Testing, Blocked"
-                                      value={newColumnName}
-                                      onChange={(e) =>
-                                        setNewColumnName(e.target.value)
-                                      }
-                                      className="font-dosis"
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter")
-                                          handleAddColumn();
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex gap-3 pt-2">
-                                    <Button
-                                      variant="outline"
-                                      onClick={() =>
-                                        setIsAddColumnModalOpen(false)
-                                      }
-                                      className="font-dosis flex-1"
-                                    >
-                                      Cancel
-                                    </Button>
-                                    <Button
-                                      onClick={handleAddColumn}
-                                      disabled={!newColumnName.trim()}
-                                      className="font-dosis flex-1 bg-orange-500 hover:bg-orange-600"
-                                    >
-                                      Add Column
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
+                          <div
+                            onClick={() => setIsAddColumnModalOpen(true)}
+                            className="flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center min-h-[400px] hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 cursor-pointer transition-all duration-200 group"
+                          >
+                            <div className="text-center w-full">
+                              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-100 dark:group-hover:bg-orange-950/30 transition-colors duration-200 mx-auto">
+                                <Plus className="w-6 h-6 text-gray-500 group-hover:text-orange-600 transition-colors duration-200" />
+                              </div>
+
+                              <h3 className="font-dosis text-lg font-medium text-gray-700 dark:text-gray-300 group-hover:text-orange-600 transition-colors duration-200 mb-2">
+                                Add Column
+                              </h3>
+                              <p className="font-dosis text-sm text-gray-500 dark:text-gray-400">
+                                Create a new column to organize your tasks
+                              </p>
+                            </div>
                           </div>
+
+                          {/* Add Column */}
+                          <AddColumnModal
+                            isOpen={isAddColumnModalOpen}
+                            onClose={() => setIsAddColumnModalOpen(false)}
+                            onSubmit={handleAddColumn}
+                            columnName={newColumnName}
+                            onColumnNameChange={setNewColumnName}
+                          />
                         </div>
                       </div>
                     </DragDropContext>
@@ -1147,166 +608,20 @@ export default function TasksPage() {
                                 {/* Tasks List */}
                                 <div className="space-y-2">
                                   {tasks.map((task) => (
-                                    <div
+                                    <TaskCard
                                       key={task.id}
-                                      className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-sm transition-all duration-200"
-                                    >
-                                      <div className="p-4">
-                                        <div className="flex items-start justify-between gap-4">
-                                          <div className="flex-1 min-w-0">
-                                            {/* Title */}
-                                            <div className="flex items-center gap-3 mb-2">
-                                              <h3 className="font-dosis font-medium text-gray-900 dark:text-gray-100 flex-1">
-                                                {task.title}
-                                              </h3>
-
-                                              {/* Priority Badge */}
-                                              <div
-                                                className={cn(
-                                                  "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                                                  task.priority === "high" &&
-                                                    "bg-red-100 dark:bg-red-950/20 text-red-700 dark:text-red-400",
-                                                  task.priority === "medium" &&
-                                                    "bg-amber-100 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400",
-                                                  task.priority === "low" &&
-                                                    "bg-emerald-100 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400"
-                                                )}
-                                              >
-                                                {getPriorityIcon(task.priority)}
-                                                <span className="capitalize">
-                                                  {task.priority}
-                                                </span>
-                                              </div>
-                                            </div>
-
-                                            {/* Description */}
-                                            {task.description && (
-                                              <p className="font-dosis text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                                                {task.description}
-                                              </p>
-                                            )}
-
-                                            {/* Meta Information */}
-                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                                              {/* Due Date */}
-                                              {task.dueDate && (
-                                                <div className="flex items-center gap-1">
-                                                  <CalendarIcon className="w-3 h-3" />
-                                                  <span className="font-dosis">
-                                                    Due{" "}
-                                                    {format(
-                                                      new Date(task.dueDate),
-                                                      "MMM dd"
-                                                    )}
-                                                  </span>
-                                                </div>
-                                              )}
-
-                                              {/* Time Spent */}
-                                              <div className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                <span className="font-dosis font-mono">
-                                                  {formatTime(task.timeSpent)}
-                                                </span>
-                                                {task.isActive && (
-                                                  <span className="font-mono text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded text-xs animate-pulse">
-                                                    {formatActiveTime(
-                                                      activeTimers[task.id] || 0
-                                                    )}
-                                                  </span>
-                                                )}
-                                              </div>
-
-                                              {/* Created Date */}
-                                              <div className="flex items-center gap-1">
-                                                <span className="font-dosis">
-                                                  Created{" "}
-                                                  {format(
-                                                    new Date(task.createdAt),
-                                                    "MMM dd"
-                                                  )}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Actions */}
-                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                              onClick={() => {
-                                                setTaskToEdit(task);
-                                                setIsEditTaskModalOpen(true);
-                                              }}
-                                              className="p-2 text-gray-400 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                                              title="Edit task"
-                                            >
-                                              <Edit3 className="w-4 h-4" />
-                                            </button>
-
-                                            <button
-                                              onClick={() =>
-                                                handleTaskComplete(task.id)
-                                              }
-                                              className="p-2 text-gray-400 hover:text-green-600 transition-colors rounded-md hover:bg-green-50 dark:hover:bg-green-950/20"
-                                              title="Mark as complete"
-                                            >
-                                              <Check className="w-4 h-4" />
-                                            </button>
-
-                                            <button
-                                              onClick={() =>
-                                                handleTimerToggle(task)
-                                              }
-                                              className={cn(
-                                                "p-2 rounded-md transition-colors",
-                                                task.isActive
-                                                  ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                  : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
-                                              )}
-                                              title={
-                                                task.isActive
-                                                  ? "Stop timer"
-                                                  : "Start timer"
-                                              }
-                                            >
-                                              {task.isActive ? (
-                                                <Square className="w-4 h-4" />
-                                              ) : (
-                                                <Play className="w-4 h-4" />
-                                              )}
-                                            </button>
-
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
-                                                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                  <MoreHorizontal className="w-4 h-4" />
-                                                </button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    handleTaskDuplicate(task)
-                                                  }
-                                                >
-                                                  <Copy className="w-4 h-4 mr-2" />
-                                                  Duplicate
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    setTaskToDelete(task)
-                                                  }
-                                                  className="text-red-600"
-                                                >
-                                                  <Trash2 className="w-4 h-4 mr-2" />
-                                                  Delete
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
+                                      task={task}
+                                      activeTimer={activeTimers[task.id]}
+                                      variant="list"
+                                      onEdit={(task) => {
+                                        setTaskToEdit(task);
+                                        setIsEditTaskModalOpen(true);
+                                      }}
+                                      onDelete={setTaskToDelete}
+                                      onComplete={handleTaskComplete}
+                                      onDuplicate={handleTaskDuplicate}
+                                      onTimerToggle={handleTimerToggle}
+                                    />
                                   ))}
                                 </div>
                               </div>
@@ -1324,205 +639,29 @@ export default function TasksPage() {
       </div>
 
       {/* Edit Task Dialog */}
-      <Dialog open={isEditTaskModalOpen} onOpenChange={setIsEditTaskModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-dosis">Edit Task</DialogTitle>
-            <DialogDescription className="font-dosis">
-              Update task details
-            </DialogDescription>
-          </DialogHeader>
-          {taskToEdit && (
-            <div className="space-y-4">
-              <div>
-                <label className="font-dosis text-sm font-medium mb-2 block">
-                  Task Title
-                </label>
-                <Input
-                  placeholder="Enter task title..."
-                  value={taskToEdit.title}
-                  onChange={(e) =>
-                    setTaskToEdit((prev) =>
-                      prev ? { ...prev, title: e.target.value } : null
-                    )
-                  }
-                  className="font-dosis"
-                />
-              </div>
-
-              <div>
-                <label className="font-dosis text-sm font-medium mb-2 block">
-                  Description (Optional)
-                </label>
-                <Textarea
-                  placeholder="Add task description..."
-                  value={taskToEdit.description || ""}
-                  onChange={(e) =>
-                    setTaskToEdit((prev) =>
-                      prev ? { ...prev, description: e.target.value } : null
-                    )
-                  }
-                  className="font-dosis resize-none"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="font-dosis text-sm font-medium mb-2 block">
-                    Priority
-                  </label>
-                  <Select
-                    value={taskToEdit.priority}
-                    onValueChange={(value: "low" | "medium" | "high") =>
-                      setTaskToEdit((prev) =>
-                        prev ? { ...prev, priority: value } : null
-                      )
-                    }
-                  >
-                    <SelectTrigger className="font-dosis">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>Low</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="medium">
-                        <div className="flex items-center gap-2">
-                          <Circle className="w-3 h-3 text-amber-600" />
-                          <span>Medium</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="high">
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="w-3 h-3 text-red-600" />
-                          <span>High</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="font-dosis text-sm font-medium mb-2 block">
-                    Due Date (Optional)
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-dosis",
-                          !taskToEdit.dueDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {taskToEdit.dueDate
-                          ? format(new Date(taskToEdit.dueDate), "PPP")
-                          : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          taskToEdit.dueDate
-                            ? new Date(taskToEdit.dueDate)
-                            : undefined
-                        }
-                        onSelect={(date) => {
-                          setTaskToEdit((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  dueDate: date
-                                    ? date.toISOString()
-                                    : undefined,
-                                }
-                              : null
-                          );
-                        }}
-                        autoFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditTaskModalOpen(false)}
-                  className="font-dosis flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleEditTask}
-                  disabled={!taskToEdit.title.trim()}
-                  className="font-dosis flex-1 bg-orange-500 hover:bg-orange-600"
-                >
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EditTaskModal
+        isOpen={isEditTaskModalOpen}
+        onClose={() => setIsEditTaskModalOpen(false)}
+        onSubmit={handleEditTask}
+        task={taskToEdit}
+        onTaskChange={setTaskToEdit}
+        isLoading={isEditing}
+      />
 
       {/* Delete Task Dialog */}
-      <AlertDialog
-        open={!!taskToDelete}
-        onOpenChange={() => setTaskToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this task? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleTaskDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteTaskDialog
+        task={taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={handleTaskDelete}
+        isLoading={isDeleting}
+      />
 
       {/* Delete Column Dialog */}
-      <AlertDialog
-        open={!!columnToDelete}
-        onOpenChange={() => setColumnToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Column</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the &quot;{columnToDelete}&quot;
-              column? All tasks in this column will be moved to
-              &quot;Todo&quot;. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteColumn}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete Column
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteColumnDialog
+        columnName={columnToDelete}
+        onClose={() => setColumnToDelete(null)}
+        onConfirm={handleDeleteColumn}
+      />
     </>
   );
 }
