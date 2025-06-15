@@ -1,7 +1,4 @@
-import {
-  AlertCircle, CheckCircle2,
-  Circle
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
 
 export const getPriorityIcon = (priority: string) => {
   switch (priority) {
@@ -45,4 +42,17 @@ export const formatTime = (minutes: number) => {
     return `${hours}h ${mins}m`;
   }
   return `${mins}m`;
+};
+
+export const getColumnColor = (column: string) => {
+  switch (column.toLowerCase()) {
+    case "todo":
+      return "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/20 dark:border-blue-800";
+    case "in progress":
+      return "text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/20 dark:border-orange-800";
+    case "done":
+      return "text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/20 dark:border-green-800";
+    default:
+      return "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-950/20 dark:border-gray-800";
+  }
 };
