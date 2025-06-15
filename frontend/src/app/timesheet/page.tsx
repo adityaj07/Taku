@@ -3,7 +3,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import HeaderBreadcrumb from "@/components/HeaderBreadcrumb";
 import Loading from "@/components/Loading";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/sidebar";
 import { useTimesheet } from "@/hooks/timesheet/useTimesheet";
 import { useWorkspaceStore } from "@/store";
-import { Plus } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -78,17 +76,6 @@ export default function TimesheetPage() {
               currentWorkspace={currentWorkspace}
               currentPageName={"Timesheet"}
             />
-
-            <div className="ml-auto">
-              <Button
-                size="sm"
-                onClick={() => setIsAddModalOpen(true)}
-                className="font-dosis bg-orange-500 hover:bg-orange-600"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Entry
-              </Button>
-            </div>
           </header>
 
           {/* Add Time Entry Modal */}
