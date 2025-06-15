@@ -1,14 +1,8 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import HeaderBreadcrumb from "@/components/HeaderBreadcrumb";
+import Loading from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -22,11 +16,11 @@ import { Plus } from "lucide-react";
 import { Dosis } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import AddTimeEntryModal from "./_components/AddTimeEntryModal";
 import DailyHeader from "./_components/DailyHeader";
 import EmptyTimeEntries from "./_components/emptyStates/EmptyTimeEntries";
+import AddTimeEntryModal from "./_components/modals/AddTimeEntryModal";
+import TimeEntryEditForm from "./_components/modals/TimeEntryEditForm";
 import TimeEntryCard from "./_components/TimeEntryCard";
-import TimeEntryEditForm from "./_components/TimeEntryEditForm";
 import WeeklyStrip from "./_components/WeeklyStrip";
 import WeeklySummary from "./_components/WeeklySummary";
 
@@ -66,18 +60,7 @@ export default function TimesheetPage() {
   }, [currentWorkspace, isLoading, isHydrated, router]);
 
   if (!isHydrated || isLoading || !currentWorkspace) {
-    return (
-      <div
-        className={`${dosis.variable} min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900`}
-      >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="font-dosis text-gray-600 dark:text-gray-300">
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
@@ -91,24 +74,10 @@ export default function TimesheetPage() {
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink
-                    href="/dashboard"
-                    className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                  >
-                    {currentWorkspace.name}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Timesheet
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <HeaderBreadcrumb
+              currentWorkspace={currentWorkspace}
+              currentPageName={"Timesheet"}
+            />
 
             <div className="ml-auto">
               <Button
@@ -147,6 +116,7 @@ export default function TimesheetPage() {
                 <DailyHeader
                   selectedDate={selectedDate}
                   entryCount={selectedDayEntries.length}
+                  setIsAddModalOpen={setIsAddModalOpen}
                 />
 
                 <div className="flex-1 overflow-y-auto p-4">

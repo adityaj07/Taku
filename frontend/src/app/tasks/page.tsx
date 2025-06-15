@@ -1,15 +1,8 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import HeaderBreadcrumb from "@/components/HeaderBreadcrumb";
 import Loading from "@/components/Loading";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -45,9 +38,7 @@ export default function TasksPage() {
     currentWorkspace,
     isLoading,
     isHydrated,
-
     updateTask,
-
     moveTask,
     startTimer,
     stopTimer,
@@ -257,24 +248,10 @@ export default function TasksPage() {
             <header className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="/dashboard"
-                      className="font-dosis text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    >
-                      {currentWorkspace.name}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Tasks
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <HeaderBreadcrumb
+                currentWorkspace={currentWorkspace}
+                currentPageName={"Tasks"}
+              />
 
               {/* Header Actions */}
               <div className="ml-auto flex items-center gap-2">

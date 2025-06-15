@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,8 +21,8 @@ import { Workspace } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { getColumnColor } from "@/utils";
 import { format } from "date-fns";
-import { Clock, Plus } from "lucide-react";
-import { Dispatch, FC, SetStateAction, useEffect, useState } from "react";
+import { Clock } from "lucide-react";
+import { FC, useEffect, useState } from "react";
 
 interface TimeEntryForm {
   taskId: string;
