@@ -11,6 +11,8 @@ import TakuMascot from "@/components/TakuMascot";
 import UserInfoModal from "@/components/UserInfoModal";
 import WorkspaceModal from "@/components/WorkspaceModal";
 import { useWorkspaceStore } from "@/store";
+import { toast } from "sonner";
+import Loading from "@/components/Loading";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -80,7 +82,7 @@ export default function Home() {
         ownerName: userInfo.name,
         role: userInfo.role,
         columns: ["Todo", "In Progress", "Done"],
-        weeklyGoals: 10,
+        weeklyGoals: 40,
         theme: "system",
         settings: {
           heatmap: true,
@@ -98,7 +100,7 @@ export default function Home() {
       }, 300);
     } catch (error) {
       console.error("Failed to create workspace:", error);
-      // TODO: Show error toast
+      toast.error("Failed to create workspace");
     }
   };
 
@@ -110,18 +112,7 @@ export default function Home() {
 
   // Show loading while hydrating
   if (!isHydrated) {
-    return (
-      <div
-        className={`${dosis.variable} min-h-screen flex items-center justify-center`}
-      >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="font-dosis text-gray-600 dark:text-gray-300">
-            Loading Taku...
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   // Don't render landing page if there's already a workspace (will redirect)
