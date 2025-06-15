@@ -48,7 +48,7 @@ const WeeklySummary: FC<WeeklySummaryProps> = ({
                 Daily Average
               </span>
               <span className="font-dosis font-semibold text-gray-900 dark:text-gray-100">
-                {formatDuration(weeklyStats.average)}
+                {formatDuration(Number(weeklyStats.average.toFixed(2)))}
               </span>
             </div>
 
