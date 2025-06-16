@@ -56,3 +56,14 @@ export const getColumnColor = (column: string) => {
       return "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-950/20 dark:border-gray-800";
   }
 };
+
+export const getActivityColor = (level: number) => {
+  const colors = [
+    "bg-gray-100 dark:bg-gray-800", // 0 - no activity
+    "bg-orange-200 dark:bg-orange-900/40", // 1 - low
+    "bg-orange-300 dark:bg-orange-800/60", // 2 - medium
+    "bg-orange-400 dark:bg-orange-700/80", // 3 - high
+    "bg-orange-500 dark:bg-orange-600", // 4 - very high
+  ];
+  return colors[level] || colors[0];
+};
