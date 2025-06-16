@@ -5,6 +5,7 @@ import { persist, subscribeWithSelector } from "zustand/middleware";
 
 interface WorkspaceState {
   currentWorkspace: Workspace | null;
+  availableWorkspaces: Workspace[];
   isLoading: boolean;
   isHydrated: boolean;
 
@@ -13,6 +14,8 @@ interface WorkspaceState {
     workspaceData: Omit<Workspace, "id" | "createdAt" | "tasks" | "timeEntries">
   ) => Promise<string>;
   loadWorkspace: (workspaceId: string) => Promise<void>;
+  loadAllWorkspaces: () => Promise<void>;
+  deleteWorkspace: (workspaceId: string) => Promise<void>;
   updateWorkspaceSettings: (
     settings: Partial<Workspace["settings"]> & {
       columns?: string[];
@@ -166,6 +169,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     persist(
       (set, get) => ({
         currentWorkspace: null,
+        availableWorkspaces: [],
         isLoading: false,
         isHydrated: false,
 
@@ -173,6 +177,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         createWorkspace: async (workspaceData) => {
           set({ isLoading: true });
+          const { loadAllWorkspaces } = get();
 
           const workspaceId = uuid();
           const now = new Date().toISOString();
@@ -203,6 +208,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             await db.tasks.bulkAdd(tasks);
 
             set({ currentWorkspace: workspace, isLoading: false });
+            // Refresh available workspaces
+
+            await loadAllWorkspaces();
             return workspaceId;
           } catch (error) {
             console.error("Failed to create workspace:", error);
@@ -239,6 +247,40 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           } catch (error) {
             console.error("Failed to load workspace:", error);
             set({ isLoading: false });
+            throw error;
+          }
+        },
+
+        loadAllWorkspaces: async () => {
+          try {
+            const workspaces = await db.workspaces.toArray();
+            set({ availableWorkspaces: workspaces });
+          } catch (error) {
+            console.error("Failed to load workspaces:", error);
+          }
+        },
+
+        deleteWorkspace: async (workspaceId) => {
+          const { currentWorkspace, loadAllWorkspaces } = get();
+
+          try {
+            // Delete all related data
+            await db.tasks.where("workspaceId").equals(workspaceId).delete();
+            await db.timeEntries
+              .where("workspaceId")
+              .equals(workspaceId)
+              .delete();
+            await db.workspaces.delete(workspaceId);
+
+            // If deleting current workspace, clear it
+            if (currentWorkspace?.id === workspaceId) {
+              set({ currentWorkspace: null });
+            }
+
+            // Reload available workspaces
+            await loadAllWorkspaces();
+          } catch (error) {
+            console.error("Failed to delete workspace:", error);
             throw error;
           }
         },
@@ -611,6 +653,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }),
         onRehydrateStorage: () => (state) => {
           state?.setHydrated();
+          // Load all workspaces on rehydration
+          state?.loadAllWorkspaces();
         },
       }
     )

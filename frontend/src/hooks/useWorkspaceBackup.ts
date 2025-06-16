@@ -1,6 +1,7 @@
-import { Workspace } from "@/lib/db";
+import { db, Task, TimeEntry, Workspace } from "@/lib/db";
 import { useWorkspaceStore } from "@/store";
 import { useCallback, useRef, useState } from "react";
+import { v4 as uuid } from "uuid";
 
 export interface ExportData {
   workspace: Workspace;
@@ -119,28 +120,101 @@ export const useWorkspaceBackup = () => {
             },
           });
 
-          // Load the new workspace to make it current
+          // Now import the tasks and time entries from the JSON
+          if (workspace.tasks && workspace.tasks.length > 0) {
+            // Clear any default seeded tasks first
+            await db.tasks.where("workspaceId").equals(newWorkspaceId).delete();
+
+            // Import tasks from JSON with new workspace ID and new UUIDs
+            const importedTasks = workspace.tasks.map((task) => ({
+              ...task,
+              id: uuid(), // Generate new ID
+              workspaceId: newWorkspaceId, // Use new workspace ID
+              createdAt: task.createdAt || new Date().toISOString(),
+              updatedAt: task.updatedAt || new Date().toISOString(),
+              timeSpent: task.timeSpent || 0,
+              isActive: false, // Reset active state
+            }));
+
+            // Add imported tasks to database
+            await db.tasks.bulkAdd(importedTasks);
+
+            // Import time entries if they exist
+            if (workspace.timeEntries && workspace.timeEntries.length > 0) {
+              // Create mapping from old task IDs to new task IDs
+              const taskIdMapping = new Map();
+              workspace.tasks.forEach((oldTask, index) => {
+                taskIdMapping.set(oldTask.id, importedTasks[index].id);
+              });
+
+              const importedTimeEntries = workspace.timeEntries.map(
+                (entry) => ({
+                  ...entry,
+                  id: uuid(), // Generate new ID
+                  workspaceId: newWorkspaceId, // Use new workspace ID
+                  taskId: taskIdMapping.get(entry.taskId) || entry.taskId, // Map to new task ID
+                  createdAt: entry.createdAt || new Date().toISOString(),
+                })
+              );
+
+              // Add imported time entries to database
+              await db.timeEntries.bulkAdd(importedTimeEntries);
+            }
+          }
+
+          // Load the workspace with all imported data
           await loadWorkspace(newWorkspaceId);
           return newWorkspaceId;
         } else {
-          // TODO: Implement merge logic
-          // For now, we'll create a new workspace even in merge mode
-          const newWorkspaceId = await createWorkspace({
-            name: `${workspace.name} (Merged)`,
-            ownerName: workspace.ownerName,
-            role: workspace.role,
-            columns: workspace.columns || ["Todo", "In Progress", "Done"],
-            weeklyGoals: workspace.weeklyGoals || 40,
-            theme: workspace.theme || "system",
-            settings: workspace.settings || {
-              heatmap: true,
-              mascot: true,
-              autoBackup: false,
-              compactMode: false,
-            },
-          });
+          // Merge mode - add imported data to current workspace
+          if (!currentWorkspace) {
+            throw new Error("No current workspace for merge operation");
+          }
 
-          return newWorkspaceId;
+          const mergedTasks: Task[] = [];
+          const mergedTimeEntries: TimeEntry[] = [];
+
+          // Import tasks with new IDs
+          if (workspace.tasks && workspace.tasks.length > 0) {
+            const importedTasks = workspace.tasks.map((task) => ({
+              ...task,
+              id: uuid(),
+              workspaceId: currentWorkspace.id,
+              title: `${task.title} (Imported)`,
+              createdAt: task.createdAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              timeSpent: task.timeSpent || 0,
+              isActive: false,
+            }));
+
+            await db.tasks.bulkAdd(importedTasks);
+            mergedTasks.push(...importedTasks);
+
+            // Import time entries with new task mappings
+            if (workspace.timeEntries && workspace.timeEntries.length > 0) {
+              const taskIdMapping = new Map();
+              workspace.tasks.forEach((oldTask, index) => {
+                taskIdMapping.set(oldTask.id, importedTasks[index].id);
+              });
+
+              const importedTimeEntries = workspace.timeEntries
+                .filter((entry) => taskIdMapping.has(entry.taskId))
+                .map((entry) => ({
+                  ...entry,
+                  id: uuid(),
+                  workspaceId: currentWorkspace.id,
+                  taskId: taskIdMapping.get(entry.taskId)!,
+                  createdAt: entry.createdAt || new Date().toISOString(),
+                }));
+
+              await db.timeEntries.bulkAdd(importedTimeEntries);
+              mergedTimeEntries.push(...importedTimeEntries);
+            }
+          }
+
+          // Reload current workspace to reflect merged data
+          await loadWorkspace(currentWorkspace.id);
+          return currentWorkspace.id;
         }
       } catch (error) {
         console.error("Failed to import workspace:", error);

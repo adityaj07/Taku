@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useWorkspaceStore } from "@/store";
+import { getRoleColor, getRoleIcon } from "@/utils";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -21,12 +22,23 @@ import {
   LayoutDashboard,
   ListChecks,
   Settings,
+  Users,
 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import React from "react";
 import { ExportButton } from "./ExportButton";
 import { ThemeToggle } from "./ThemeToggle";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { Badge } from "./ui/badge";
+import { Separator } from "./ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],
@@ -70,32 +82,72 @@ export function AppSidebar() {
   return (
     <div className={dosis.variable}>
       <Sidebar className="border-r border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-        <SidebarHeader className="border-b border-gray-200/50 dark:border-gray-700/50 p-4">
+        <SidebarHeader className="border-b border-gray-200/50 dark:border-gray-700/50 px-5 py-4 space-y-4">
           {/* App Branding */}
-          <motion.div
-            className="flex items-center gap-2 mb-3"
-            transition={{ duration: 0.5 }}
-          >
+
+          <div className="flex items-center gap-3">
+            <img
+              src="/takulogo.png"
+              alt="Taku Logo"
+              className="w-8 h-8 object-contain rounded-sm shadow-sm"
+            />
             <div className="relative">
-              <h1 className="font-dosis text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+              <h1 className="font-dosis text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent tracking-wide">
                 Taku
               </h1>
-              <motion.div className="absolute -top-1 -right-3 w-2 h-2 bg-gradient-to-r from-orange-400 to-amber-400 rounded-full" />
+              {/* <span className="absolute -top-1 -right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-orange-400 to-amber-400 shadow-md" /> */}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Workspace Context */}
+          {/* Workspace Switcher */}
+          {currentWorkspace && <WorkspaceSwitcher />}
+
+          <Separator className="!my-3 bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent" />
+
+          {/* Enhanced Workspace Info */}
           {currentWorkspace && (
             <motion.div
-              className="space-y-1"
+              className="space-y-3 p-3 rounded-xl bg-gradient-to-br from-gray-50/80 to-white/80 dark:from-gray-800/80 dark:to-gray-900/80 border border-gray-200/50 dark:border-gray-700/50"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <p className="font-dosis text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {currentWorkspace.name}
-              </p>
-              <p className="font-dosis text-xs text-gray-500 dark:text-gray-400">
-                {currentWorkspace.ownerName} • {currentWorkspace.role}
-              </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 shadow-sm" />
+                  <p className="font-dosis text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    {currentWorkspace.name}
+                  </p>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge
+                        className={`text-xs px-2 py-1 font-medium ${getRoleColor(
+                          currentWorkspace.role
+                        )} shadow-sm`}
+                      >
+                        <div className="flex items-center gap-1">
+                          {React.createElement(
+                            getRoleIcon(currentWorkspace.role),
+                            { className: "w-3 h-3" }
+                          )}
+                          {currentWorkspace.role}
+                        </div>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Your role in this workspace</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <Users className="w-3 h-3" />
+                <span className="font-dosis">
+                  by {currentWorkspace.ownerName}
+                </span>
+              </div>
             </motion.div>
           )}
         </SidebarHeader>

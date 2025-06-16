@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Crown, Users } from "lucide-react";
 
 export const getPriorityIcon = (priority: string) => {
   switch (priority) {
@@ -66,4 +66,26 @@ export const getActivityColor = (level: number) => {
     "bg-orange-500 dark:bg-orange-600", // 4 - very high
   ];
   return colors[level] || colors[0];
+};
+
+export const getRoleIcon = (role: string) => {
+  switch (role?.toLowerCase()) {
+    case "owner":
+      return Crown;
+    case "admin":
+      return Users;
+    default:
+      return Users;
+  }
+};
+
+export const getRoleColor = (role: string) => {
+  switch (role?.toLowerCase()) {
+    case "owner":
+      return "bg-gradient-to-r from-yellow-400 to-orange-500 text-white";
+    case "admin":
+      return "bg-gradient-to-r from-blue-500 to-indigo-600 text-white";
+    default:
+      return "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
+  }
 };

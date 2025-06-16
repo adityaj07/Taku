@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 
 import ActionButtons from "@/components/ActiveButtons";
 import LandingHeader from "@/components/LandingHeader";
+import Loading from "@/components/Loading";
 import TakuMascot from "@/components/TakuMascot";
 import UserInfoModal from "@/components/UserInfoModal";
 import WorkspaceModal from "@/components/WorkspaceModal";
 import { useWorkspaceStore } from "@/store";
 import { toast } from "sonner";
-import Loading from "@/components/Loading";
 
 const dosis = Dosis({
   subsets: ["latin", "latin-ext"],

@@ -38,7 +38,7 @@ export function ImportDialog({
   onConfirm,
   isLoading = false,
 }: ImportDialogProps) {
-  const { currentWorkspace } = useWorkspaceStore();
+  const { currentWorkspace, availableWorkspaces } = useWorkspaceStore();
   const [importMode, setImportMode] = useState<ImportMode>("overwrite");
 
   // Set default import mode based on whether there's a current workspace
@@ -62,8 +62,8 @@ export function ImportDialog({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="font-dosis flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <div>Import Workspace</div>
@@ -73,8 +73,8 @@ export function ImportDialog({
             </div>
           </AlertDialogTitle>
           <AlertDialogDescription className="font-dosis space-y-4 pt-2">
-            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-blue-800 dark:text-blue-200 text-sm">
+            <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-orange-800 dark:text-orange-200 text-sm">
                 <strong>Selected file:</strong> {fileName || "No file selected"}
               </p>
             </div>
@@ -97,7 +97,11 @@ export function ImportDialog({
                       <div className="font-medium">Create New Workspace</div>
                       <div className="text-xs text-gray-500">
                         {currentWorkspace
-                          ? "Create a new workspace from imported data"
+                          ? `Creates a new workspace alongside your existing ${
+                              availableWorkspaces.length
+                            } workspace${
+                              availableWorkspaces.length !== 1 ? "s" : ""
+                            }`
                           : "Create workspace from imported data"}
                       </div>
                     </div>
@@ -107,7 +111,8 @@ export function ImportDialog({
                       <div className="space-y-1">
                         <div className="font-medium">Merge with Current</div>
                         <div className="text-xs text-gray-500">
-                          Add imported data to current workspace
+                          Add imported tasks to &quot;{currentWorkspace.name}
+                          &quot;
                         </div>
                       </div>
                     </SelectItem>
@@ -122,9 +127,20 @@ export function ImportDialog({
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                   <p className="text-amber-800 dark:text-amber-200 text-sm">
-                    This will create a new workspace. Your current workspace{" "}
-                    <strong>"{currentWorkspace.name}"</strong> will remain
-                    unchanged.
+                    This will create a new workspace and switch to it. Your
+                    current workspace{" "}
+                    <strong>&quot;{currentWorkspace.name}&quot;</strong> will
+                    remain unchanged and you can switch back anytime.
+                  </p>
+                </div>
+              </div>
+            ) : currentWorkspace && importMode === "merge" ? (
+              <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-orange-800 dark:text-orange-200 text-sm">
+                    This will add imported tasks to your current workspace.
+                    Tasks will be renamed to avoid conflicts.
                   </p>
                 </div>
               </div>
@@ -144,10 +160,14 @@ export function ImportDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            className="font-dosis bg-blue-600 hover:bg-blue-700"
+            className="font-dosis bg-orange-600 hover:bg-orange-700"
             disabled={isLoading}
           >
-            {isLoading ? "Importing..." : "Import Workspace"}
+            {isLoading
+              ? "Importing..."
+              : importMode === "merge"
+              ? "Merge Data"
+              : "Create Workspace"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
