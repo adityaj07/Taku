@@ -52,6 +52,15 @@ interface WorkspaceState {
   deleteTimeEntry: (entryId: string) => Promise<void>;
 }
 
+const calculateTaskTimeSpent = (
+  taskId: string,
+  timeEntries: TimeEntry[]
+): number => {
+  return timeEntries
+    .filter((entry) => entry.taskId === taskId)
+    .reduce((total, entry) => total + entry.duration, 0);
+};
+
 const getSeededTasks = (
   role: Workspace["role"]
 ): Omit<
@@ -420,7 +429,6 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Update task
           await updateTask(taskId, {
             isActive: false,
-            timeSpent: task.timeSpent + duration,
             startTime: undefined,
           });
 
@@ -452,10 +460,40 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               ...currentWorkspace.timeEntries,
               timeEntry,
             ];
+
+            // Calculate new timeSpent for the task
+            const newTimeSpent = calculateTaskTimeSpent(
+              entryData.taskId,
+              updatedTimeEntries
+            );
+
+            // Update the task's timeSpent in the database
+            const task = currentWorkspace.tasks.find(
+              (t) => t.id === entryData.taskId
+            );
+            if (task) {
+              await db.tasks.update(task.id, {
+                timeSpent: newTimeSpent,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+
+            // Update local state with recalculated timeSpent
+            const updatedTasks = currentWorkspace.tasks.map((t) =>
+              t.id === entryData.taskId
+                ? {
+                    ...t,
+                    timeSpent: newTimeSpent,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : t
+            );
+
             set({
               currentWorkspace: {
                 ...currentWorkspace,
                 timeEntries: updatedTimeEntries,
+                tasks: updatedTasks,
               },
             });
           } catch (error) {
@@ -468,6 +506,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!currentWorkspace) return;
 
           try {
+            const originalEntry = currentWorkspace.timeEntries.find(
+              (e) => e.id === entryId
+            );
+            if (!originalEntry) return;
+
             await db.timeEntries.update(entryId, updates);
 
             const updatedTimeEntries = currentWorkspace.timeEntries.map(
@@ -475,10 +518,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 entry.id === entryId ? { ...entry, ...updates } : entry
             );
 
+            // Recalculate timeSpent for the affected task
+            const newTimeSpent = calculateTaskTimeSpent(
+              originalEntry.taskId,
+              updatedTimeEntries
+            );
+
+            // Update task in database
+            await db.tasks.update(originalEntry.taskId, {
+              timeSpent: newTimeSpent,
+              updatedAt: new Date().toISOString(),
+            });
+
+            // Update local state
+            const updatedTasks = currentWorkspace.tasks.map((t) =>
+              t.id === originalEntry.taskId
+                ? {
+                    ...t,
+                    timeSpent: newTimeSpent,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : t
+            );
+
             set({
               currentWorkspace: {
                 ...currentWorkspace,
                 timeEntries: updatedTimeEntries,
+                tasks: updatedTasks,
               },
             });
           } catch (error) {
@@ -491,15 +558,45 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!currentWorkspace) return;
 
           try {
+            const entryToDelete = currentWorkspace.timeEntries.find(
+              (e) => e.id === entryId
+            );
+            if (!entryToDelete) return;
+
             await db.timeEntries.delete(entryId);
 
             const updatedTimeEntries = currentWorkspace.timeEntries.filter(
               (entry) => entry.id !== entryId
             );
+
+            // Recalculate timeSpent for the affected task
+            const newTimeSpent = calculateTaskTimeSpent(
+              entryToDelete.taskId,
+              updatedTimeEntries
+            );
+
+            // Update task in database
+            await db.tasks.update(entryToDelete.taskId, {
+              timeSpent: newTimeSpent,
+              updatedAt: new Date().toISOString(),
+            });
+
+            // Update local state
+            const updatedTasks = currentWorkspace.tasks.map((t) =>
+              t.id === entryToDelete.taskId
+                ? {
+                    ...t,
+                    timeSpent: newTimeSpent,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : t
+            );
+
             set({
               currentWorkspace: {
                 ...currentWorkspace,
                 timeEntries: updatedTimeEntries,
+                tasks: updatedTasks,
               },
             });
           } catch (error) {

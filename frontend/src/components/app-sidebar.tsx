@@ -21,11 +21,11 @@ import {
   LayoutDashboard,
   ListChecks,
   Settings,
-  Upload,
 } from "lucide-react";
 import { Dosis } from "next/font/google";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ExportButton } from "./ExportButton";
 import { ThemeToggle } from "./ThemeToggle";
 
 const dosis = Dosis({
@@ -123,7 +123,6 @@ export function AppSidebar() {
                         `}
                       >
                         <Link href={item.url}>
-                          {/* Remove animations from navigation items */}
                           <div className="flex items-center gap-3 w-full">
                             <item.icon
                               className={`
@@ -165,19 +164,18 @@ export function AppSidebar() {
         <SidebarFooter className="border-t border-gray-200/50 dark:border-gray-700/50 p-4">
           <motion.div
             className="space-y-3"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
           >
             {/* Export/Backup Button */}
-            <motion.button
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-dosis font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg transition-all duration-200 group"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Upload className="w-3 h-3 group-hover:-translate-y-0.5 transition-transform duration-200" />
-              Export Workspace
-            </motion.button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <ExportButton
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 h-auto py-2"
+              >
+                Export Workspace
+              </ExportButton>
+            </motion.div>
 
             {/* Version & Love */}
             <div className="flex items-center justify-center gap-1 text-xs font-dosis text-gray-500 dark:text-gray-400">

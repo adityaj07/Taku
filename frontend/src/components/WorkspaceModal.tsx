@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Folder, X } from "lucide-react";
 import { useState } from "react";
@@ -138,26 +139,41 @@ export default function WorkspaceModal({
                 </div>
 
                 <div className="flex gap-3">
+                  {/* Cancel Button */}
                   <Button
                     variant="outline"
                     onClick={onClose}
-                    className="font-dosis flex-1"
+                    className="font-dosis flex-1 py-2 rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-muted transition-colors"
                   >
                     Cancel
                   </Button>
 
-                  <motion.div className="flex-1">
-                    <motion.button
-                      onClick={handleSubmit}
-                      disabled={!workspaceName.trim()}
-                      className="font-dosis w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed group"
-                      whileHover={{ scale: workspaceName.trim() ? 1.02 : 1 }}
-                      whileTap={{ scale: workspaceName.trim() ? 0.98 : 1 }}
+                  {/* Continue Button */}
+                  <motion.button
+                    onClick={handleSubmit}
+                    disabled={!workspaceName.trim()}
+                    className={cn(
+                      "font-dosis flex-1 px-4 py-2 rounded-xl text-white flex items-center justify-center gap-2",
+                      "bg-gradient-to-r from-orange-500 to-amber-500",
+                      "hover:from-orange-600 hover:to-amber-600",
+                      "disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    )}
+                    whileHover={workspaceName.trim() ? { scale: 1.02 } : {}}
+                    whileTap={workspaceName.trim() ? { scale: 0.98 } : {}}
+                  >
+                    Continue
+                    <motion.span
+                      initial={{ x: 0 }}
+                      whileHover={workspaceName.trim() ? { x: 4 } : {}}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 20,
+                      }}
                     >
-                      Continue
-                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
-                    </motion.button>
-                  </motion.div>
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.span>
+                  </motion.button>
                 </div>
               </div>
             </motion.div>

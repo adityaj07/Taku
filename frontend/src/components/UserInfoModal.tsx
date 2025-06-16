@@ -1,8 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X, User, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, User, X } from "lucide-react";
 import { useState } from "react";
 
 interface UserInfoModalProps {
@@ -187,14 +188,27 @@ export default function UserInfoModal({
                   <motion.button
                     onClick={handleSubmit}
                     disabled={!name.trim() || !selectedRole}
-                    className="font-dosis w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed group"
-                    whileHover={{
-                      scale: name.trim() && selectedRole ? 1.02 : 1,
-                    }}
-                    whileTap={{ scale: name.trim() && selectedRole ? 0.98 : 1 }}
+                    className={cn(
+                      "font-dosis flex-1 px-4 py-2 rounded-xl text-white flex items-center justify-center gap-2 w-full",
+                      "bg-gradient-to-r from-orange-500 to-amber-500",
+                      "hover:from-orange-600 hover:to-amber-600",
+                      "disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    )}
+                    whileHover={workspaceName.trim() ? { scale: 1.02 } : {}}
+                    whileTap={workspaceName.trim() ? { scale: 0.98 } : {}}
                   >
                     Create My Workspace
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+                    <motion.span
+                      initial={{ x: 0 }}
+                      whileHover={workspaceName.trim() ? { x: 4 } : {}}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 20,
+                      }}
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.span>
                   </motion.button>
                 </motion.div>
               </div>

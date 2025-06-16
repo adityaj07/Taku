@@ -1,11 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Upload, Plus, Sparkles, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2, Plus, Sparkles } from "lucide-react";
+import { ImportButton } from "./ImportButton";
 
 interface ActionButtonsProps {
-  onImportWorkspace: () => void;
+  onImportSuccess?: (workspaceId?: string) => void;
   onStartFresh: () => void;
   isLoading?: boolean;
 }
@@ -42,7 +43,7 @@ const buttonTap = {
 };
 
 export default function ActionButtons({
-  onImportWorkspace,
+  onImportSuccess,
   onStartFresh,
   isLoading = false,
 }: ActionButtonsProps) {
@@ -83,16 +84,15 @@ export default function ActionButtons({
           whileHover={!isLoading ? buttonHover : {}}
           whileTap={!isLoading ? buttonTap : {}}
         >
-          <Button
-            onClick={onImportWorkspace}
-            disabled={isLoading}
-            variant="outline"
+          <ImportButton
             size="lg"
-            className="font-dosis text-lg px-8 py-6 border-2 border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/50 shadow-lg hover:shadow-xl group disabled:opacity-50"
+            variant="outline"
+            className="w-full sm:w-auto px-8 py-3 text-base font-medium bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-orange-200 dark:border-orange-800 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-all duration-200"
+            onSuccess={onImportSuccess}
+            redirectOnSuccess={true}
           >
-            <Upload className="w-5 h-5 mr-2 group-hover:-translate-y-1 transition-transform duration-300" />
-            Import Workspace
-          </Button>
+            Import Existing Workspace
+          </ImportButton>
         </motion.div>
       </div>
 

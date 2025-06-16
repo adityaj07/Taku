@@ -47,19 +47,12 @@ export default function Home() {
     }
   }, [currentWorkspace, isHydrated, isLoading, router]);
 
-  const handleImportWorkspace = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        // Handle file import logic here
-        console.log("Importing workspace:", file.name);
-        // TODO: Implement import logic
-      }
-    };
-    input.click();
+  const handleImportSuccess = (workspaceId?: string) => {
+    console.log(
+      "Workspace imported successfully from landing page:",
+      workspaceId
+    );
+    // The ImportButton will handle navigation with redirectOnSuccess prop
   };
 
   const handleStartFresh = () => {
@@ -163,7 +156,7 @@ export default function Home() {
           <LandingHeader />
           <TakuMascot />
           <ActionButtons
-            onImportWorkspace={handleImportWorkspace}
+            onImportSuccess={handleImportSuccess}
             onStartFresh={handleStartFresh}
             isLoading={isLoading}
           />
