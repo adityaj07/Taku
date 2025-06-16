@@ -1,6 +1,18 @@
-# Taku 🐹
+<p align="center">
+  <img 
+    src="frontend/src/app/opengraph-image.png" 
+    alt="Taku Logo" 
+    width="100%" 
+    height="210" 
+    style="border-radius: 12px; object-fit: cover;"
+  />
+</p>
 
-**Taku** is a local-first productivity and time tracking app built for creators, makers, and deep workers. It helps you track tasks, log focused time, set weekly goals, and visualize your progress — all offline, with no accounts or cloud sync required.
+<h1 align="center">Taku 🐹</h1>
+
+<p align="center">
+  <em>Local-first productivity and time tracking for deep workers.</em>
+</p>
 
 ---
 
@@ -14,5 +26,3 @@
 - **📅 Streaks Heatmap** – See how consistently you’ve logged time using a GitHub-style calendar.
 - **🧷 Backup & Restore** – Export your entire workspace as `.json` and re-import it anytime.
 - **⚡ Fast UX** – Optimized for low friction and local speed.
-
----
