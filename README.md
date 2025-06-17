@@ -3,7 +3,7 @@
     src="frontend/public/README.png" 
     alt="Taku Logo" 
     width="100%" 
-    height="210" 
+    height="100%" 
     style="border-radius: 12px; object-fit: cover;"
   />
 </p>
