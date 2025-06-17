@@ -1,6 +1,6 @@
 <p align="center">
   <img 
-    src="frontend/src/app/opengraph-image.png" 
+    src="frontend/public/README.png" 
     alt="Taku Logo" 
     width="100%" 
     height="210" 
