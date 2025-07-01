@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useWorkspaceStore } from "@/store";
 import { Edit3, Save, Target, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function ProductivitySettings() {
   const { currentWorkspace, updateWorkspaceSettings } = useWorkspaceStore();
@@ -134,7 +134,7 @@ export function ProductivitySettings() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div>
                 <Label className="font-dosis font-medium">Mascot</Label>
                 <p className="font-dosis text-sm text-gray-600 dark:text-gray-400">
@@ -147,7 +147,7 @@ export function ProductivitySettings() {
                   handleSettingToggle("mascot", checked)
                 }
               />
-            </div>
+            </div> */}
 
             <div className="flex items-center justify-between">
               <div>

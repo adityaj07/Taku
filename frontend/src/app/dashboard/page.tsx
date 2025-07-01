@@ -409,7 +409,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Kanban Board */}
-            <div className="flex-1 overflow-hidden p-2">
+            <div className="flex-1 overflow-hidden p-2 bg-white dark:bg-gray-900">
               <motion.div
                 className="h-full p-6 overflow-hidden flex flex-col"
                 variants={containerVariants}
