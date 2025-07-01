@@ -1,8 +1,8 @@
 "use client";
 
+import { useWorkspaceStore } from "@/store";
 import { useCallback } from "react";
 import { DropResult } from "react-beautiful-dnd";
-import { useWorkspaceStore } from "@/store";
 
 export const useTaskDragDrop = () => {
   const { moveTask } = useWorkspaceStore();
@@ -11,10 +11,12 @@ export const useTaskDragDrop = () => {
     async (result: DropResult) => {
       const { destination, source, draggableId } = result;
 
-      // No destination - dropped outside
-      if (!destination) return;
+      // If dropped outside a valid drop zone
+      if (!destination) {
+        return;
+      }
 
-      // Dropped in the same position
+      // If dropped in the same position
       if (
         destination.droppableId === source.droppableId &&
         destination.index === source.index
@@ -23,10 +25,11 @@ export const useTaskDragDrop = () => {
       }
 
       try {
+        // Move task between columns or reorder within same column
         await moveTask(draggableId, destination.droppableId);
       } catch (error) {
         console.error("Failed to move task:", error);
-        // Could add toast notification here
+        // Optionally show error toast/notification
       }
     },
     [moveTask]
