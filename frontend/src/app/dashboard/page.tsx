@@ -36,7 +36,7 @@ import {
 import { Task } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store";
-import { format } from "date-fns";
+import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -284,16 +284,37 @@ export default function DashboardPage() {
     });
   };
 
-  // Calculate weekly progress
-  const totalTimeThisWeek = currentWorkspace.tasks.reduce(
-    (total, task) => total + task.timeSpent,
-    0
-  );
+  // Helper function to get current week dates
+  const getWeekDates = () => {
+    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  };
+
+  // Calculate weekly progress correctly
+  const getWeeklyProgress = () => {
+    if (!currentWorkspace) return { totalMinutes: 0, percentage: 0 };
+
+    const weekDates = getWeekDates();
+    let totalMinutes = 0;
+
+    weekDates.forEach((date) => {
+      const dayEntries = currentWorkspace.timeEntries.filter((entry) =>
+        isSameDay(new Date(entry.startTime), date)
+      );
+      totalMinutes += dayEntries.reduce(
+        (sum, entry) => sum + entry.duration,
+        0
+      );
+    });
+
+    const weeklyGoalMinutes = currentWorkspace.weeklyGoals * 60;
+    const percentage = Math.min((totalMinutes / weeklyGoalMinutes) * 100, 100);
+
+    return { totalMinutes, percentage };
+  };
+
+  const weeklyProgress = getWeeklyProgress();
   const weeklyGoalHours = currentWorkspace.weeklyGoals;
-  const weeklyProgressPercentage = Math.min(
-    (totalTimeThisWeek / 60 / weeklyGoalHours) * 100,
-    100
-  );
 
   // Group tasks by column
   const tasksByColumn = currentWorkspace.columns.reduce((acc, column) => {
@@ -372,14 +393,14 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <span className="font-dosis text-sm text-gray-500 dark:text-gray-400">
-                        {(totalTimeThisWeek / 60).toFixed(1)} /{" "}
+                        {(weeklyProgress.totalMinutes / 60).toFixed(1)} /{" "}
                         {weeklyGoalHours}h
                       </span>
                     </div>
                     <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-1000"
-                        style={{ width: `${weeklyProgressPercentage}%` }}
+                        style={{ width: `${weeklyProgress.percentage}%` }}
                       />
                     </div>
                   </div>
