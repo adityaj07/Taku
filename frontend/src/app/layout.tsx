@@ -1,7 +1,8 @@
-import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
+import { ThemeProvider } from "next-themes";
 import { Geist, Geist_Mono, Manrope } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +45,11 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
+          <Script
+            defer
+            src={process.env.NEXT_ANALYTICS_WEBSITE_URL}
+            data-website-id={process.env.NEXT_ANALYTICS_WEBSITE_ID}
+          ></Script>
         </ThemeProvider>
       </body>
     </html>
